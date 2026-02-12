@@ -26,43 +26,66 @@ export const MainLayout: React.FC = () => {
       </main>
 
       {/* Mobile Flex Layout */}
-      <main className="flex-1 md:hidden flex flex-col overflow-hidden relative">
+      <main className="flex-1 md:hidden flex flex-col overflow-hidden relative bg-neutral-950">
         <div className="flex-1 overflow-hidden relative">
-           <div className={`absolute inset-0 ${activeTab === 'tune' ? 'z-10' : 'z-0 invisible'}`}>
+           {/* Tune Panel */}
+           <div 
+             className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${activeTab === 'tune' ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+           >
              <ControlsPanel />
            </div>
-           <div className={`absolute inset-0 ${activeTab === 'preview' ? 'z-10' : 'z-0 invisible'}`}>
+
+           {/* Preview Panel */}
+           <div 
+             className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${activeTab === 'preview' ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+           >
              <PreviewPanel />
            </div>
-           <div className={`absolute inset-0 ${activeTab === 'export' ? 'z-10' : 'z-0 invisible'}`}>
+
+           {/* Export Panel */}
+           <div 
+             className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${activeTab === 'export' ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+           >
              <PresetsPanel />
            </div>
         </div>
 
         {/* Mobile Tab Bar */}
-        <nav className="h-16 bg-neutral-900 border-t border-neutral-800 grid grid-cols-3 shrink-0 pb-safe">
+        <nav className="h-20 bg-black/80 backdrop-blur-xl border-t border-white/10 grid grid-cols-3 shrink-0 pb-6 px-2 relative z-50">
           <button 
             onClick={() => setActiveTab('tune')}
-            className={`flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'tune' ? 'text-indigo-400' : 'text-neutral-500 hover:text-neutral-300'}`}
+            className="flex flex-col items-center justify-center gap-1.5 group"
           >
-            <Sliders className="w-5 h-5" />
-            <span className="text-[10px] font-medium uppercase tracking-wide">Tune</span>
+            <div className={`p-1.5 rounded-full transition-all duration-300 ${activeTab === 'tune' ? 'bg-indigo-500/20 text-indigo-400 scale-110' : 'text-neutral-500 group-hover:text-neutral-300'}`}>
+              <Sliders className="w-5 h-5" />
+            </div>
+            <span className={`text-[10px] font-semibold tracking-wide transition-colors ${activeTab === 'tune' ? 'text-indigo-400' : 'text-neutral-600'}`}>
+              TUNE
+            </span>
           </button>
           
           <button 
             onClick={() => setActiveTab('preview')}
-            className={`flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'preview' ? 'text-indigo-400' : 'text-neutral-500 hover:text-neutral-300'}`}
+            className="flex flex-col items-center justify-center gap-1.5 group"
           >
-            <Eye className="w-5 h-5" />
-            <span className="text-[10px] font-medium uppercase tracking-wide">Preview</span>
+            <div className={`p-1.5 rounded-full transition-all duration-300 ${activeTab === 'preview' ? 'bg-indigo-500/20 text-indigo-400 scale-110' : 'text-neutral-500 group-hover:text-neutral-300'}`}>
+              <Eye className="w-5 h-5" />
+            </div>
+            <span className={`text-[10px] font-semibold tracking-wide transition-colors ${activeTab === 'preview' ? 'text-indigo-400' : 'text-neutral-600'}`}>
+              PREVIEW
+            </span>
           </button>
           
           <button 
             onClick={() => setActiveTab('export')}
-            className={`flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'export' ? 'text-indigo-400' : 'text-neutral-500 hover:text-neutral-300'}`}
+            className="flex flex-col items-center justify-center gap-1.5 group"
           >
-            <Download className="w-5 h-5" />
-            <span className="text-[10px] font-medium uppercase tracking-wide">Export</span>
+            <div className={`p-1.5 rounded-full transition-all duration-300 ${activeTab === 'export' ? 'bg-indigo-500/20 text-indigo-400 scale-110' : 'text-neutral-500 group-hover:text-neutral-300'}`}>
+              <Download className="w-5 h-5" />
+            </div>
+            <span className={`text-[10px] font-semibold tracking-wide transition-colors ${activeTab === 'export' ? 'text-indigo-400' : 'text-neutral-600'}`}>
+              EXPORT
+            </span>
           </button>
         </nav>
       </main>
