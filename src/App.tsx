@@ -1,8 +1,11 @@
 import { MainLayout } from './ui/layout/MainLayout';
+import { ErrorBoundary } from './ErrorBoundary';
 
 function App() {
   return (
-    <MainLayout />
+    <ErrorBoundary>
+      <MainLayout />
+    </ErrorBoundary>
   );
 }
 
