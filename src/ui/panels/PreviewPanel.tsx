@@ -4,14 +4,15 @@ import { useStore } from '../../state/store';
 import { useAsciiWorker } from '../../features/ascii/useAsciiWorker';
 import { Upload, Play, Pause, ZoomIn, ZoomOut, Maximize2, X } from 'lucide-react';
 import { convertToAscii } from '../../features/ascii/asciiEngine';
+import type { ColorAsciiResult } from '../../features/ascii/asciiEngine';
 import { getCharset } from '../../features/ascii/charsets';
 
 export const PreviewPanel: React.FC = () => {
   const { 
-    fileUrl, asciiText, setFile, isProcessing, 
-    mediaType, gifUrl,
+    fileUrl, asciiText, colorHtml, setFile, isProcessing, 
+    mediaType, gifUrl, colorMode,
     columns, charset, dither, isInverted, brightness, contrast,
-    setAscii
+    setAscii, setColorHtml
   } = useStore();
   
   useAsciiWorker();
@@ -63,16 +64,24 @@ export const PreviewPanel: React.FC = () => {
           ctx.drawImage(video, 0, 0);
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           
-          const text = convertToAscii(imageData, {
+          const result = convertToAscii(imageData, {
             columns,
             charset: getCharset(charset),
             dither,
             isInverted,
             brightness,
-            contrast
+            contrast,
+            colorMode
           });
           
-          setAscii(text);
+          if (typeof result === 'string') {
+            setAscii(result);
+            setColorHtml('');
+          } else {
+            const cr = result as ColorAsciiResult;
+            setAscii(cr.text);
+            setColorHtml(cr.html);
+          }
         }
       }
       rafRef.current = requestAnimationFrame(loop);
@@ -83,7 +92,7 @@ export const PreviewPanel: React.FC = () => {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [mediaType, columns, charset, dither, isInverted, brightness, contrast, setAscii]);
+  }, [mediaType, columns, charset, dither, isInverted, brightness, contrast, colorMode, setAscii, setColorHtml]);
 
   // Paste handler
   useEffect(() => {
@@ -156,6 +165,11 @@ export const PreviewPanel: React.FC = () => {
         setIsVideoPlaying(false);
       }
     }
+  };
+
+  const fontStyle = {
+    fontFamily: '"Cascadia Code", "Consolas", "Courier New", monospace',
+    lineHeight: '0.6em',
   };
 
   return (
@@ -262,15 +276,20 @@ export const PreviewPanel: React.FC = () => {
               className="bg-black origin-center transition-transform duration-150 ease-out"
               style={{ transform: `scale(${zoom})` }}
             >
-              <pre 
-                className="font-mono text-[8px] leading-[8px] whitespace-pre text-white/90 select-text"
-                style={{ 
-                  fontFamily: '"Cascadia Code", "Consolas", "Courier New", monospace',
-                  lineHeight: '0.6em',
-                }}
-              >
-                {asciiText}
-              </pre>
+              {colorMode && colorHtml ? (
+                <pre 
+                  className="font-mono text-[8px] leading-[8px] whitespace-pre select-text"
+                  style={fontStyle}
+                  dangerouslySetInnerHTML={{ __html: colorHtml }}
+                />
+              ) : (
+                <pre 
+                  className="font-mono text-[8px] leading-[8px] whitespace-pre text-white/90 select-text"
+                  style={fontStyle}
+                >
+                  {asciiText}
+                </pre>
+              )}
             </div>
           </div>
               

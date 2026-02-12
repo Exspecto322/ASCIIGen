@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../state/store';
 import { CHARSETS, sortCharsByDensity } from '../../features/ascii/charsets';
-import { Sliders, Type, Grid, Sun, Moon, Droplet, ChevronDown, ChevronRight, ArrowUpDown, RotateCcw } from 'lucide-react';
+import { Sliders, Type, Grid, Sun, Moon, Droplet, ChevronDown, ChevronRight, ArrowUpDown, RotateCcw, Palette } from 'lucide-react';
 
 interface ControlSectionProps {
   title: string;
@@ -36,7 +36,7 @@ const ControlSection = ({ title, icon: Icon, children, defaultOpen = true }: Con
 
 export const ControlsPanel: React.FC = () => {
   const { 
-    columns, charset, dither, isInverted, brightness, contrast,
+    columns, charset, dither, isInverted, brightness, contrast, colorMode,
     updateSettings 
   } = useStore();
 
@@ -108,15 +108,43 @@ export const ControlsPanel: React.FC = () => {
              />
            </div>
            
-           <label className="flex items-center gap-3 text-xs text-neutral-400 cursor-pointer select-none py-1">
-             <input 
-               type="checkbox" 
-               checked={isInverted}
-               onChange={(e) => updateSettings({ isInverted: e.target.checked })}
-               className="toggle-switch"
-             />
-             <span>Invert Output</span>
-           </label>
+           <div className="flex flex-col gap-2">
+             <label className="flex items-center gap-3 text-xs text-neutral-400 cursor-pointer select-none py-1">
+               <input 
+                 type="checkbox" 
+                 checked={isInverted}
+                 onChange={(e) => updateSettings({ isInverted: e.target.checked })}
+                 className="toggle-switch"
+               />
+               <span>Invert Output</span>
+             </label>
+           </div>
+        </div>
+      </ControlSection>
+
+      {/* Color Mode */}
+      <ControlSection title="Color" icon={Palette}>
+        <div className="space-y-3 pt-3">
+          <label className="flex items-center justify-between text-xs text-neutral-400 cursor-pointer select-none py-1">
+            <div className="flex items-center gap-2">
+              <span>Color Mode</span>
+              {colorMode && (
+                <span className="text-[9px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wider">On</span>
+              )}
+            </div>
+            <input 
+              type="checkbox" 
+              checked={colorMode}
+              onChange={(e) => updateSettings({ colorMode: e.target.checked })}
+              className="toggle-switch"
+            />
+          </label>
+          <p className="text-[10px] text-neutral-600 leading-relaxed">
+            {colorMode 
+              ? "Preserves original colors from source image" 
+              : "Standard monochrome ASCII output"
+            }
+          </p>
         </div>
       </ControlSection>
 

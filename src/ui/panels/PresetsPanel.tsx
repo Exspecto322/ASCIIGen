@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useStore } from '../../state/store';
+import type { Preset } from '../../state/store';
 import { copyToClipboard, downloadTxt, downloadPng } from '../../features/ascii/exportUtils';
 import { useVideoWorker } from '../../features/video/useVideoWorker';
-import { Copy, FileText, Image as ImageIcon, Check, Film, Loader2 } from 'lucide-react';
+import { Copy, FileText, Image as ImageIcon, Check, Film, Loader2, Save, Trash2 } from 'lucide-react';
 
 const ExportButton = ({ 
   onClick, disabled, icon: Icon, iconColor, label 
@@ -25,10 +26,50 @@ const ExportButton = ({
   </button>
 );
 
+const PresetChip = ({ 
+  preset, isActive, onLoad, onDelete 
+}: { 
+  preset: Preset; 
+  isActive: boolean;
+  onLoad: () => void; 
+  onDelete?: () => void;
+}) => (
+  <div className={`flex items-center gap-1 rounded-lg border transition-all ${isActive ? 'bg-indigo-500/15 border-indigo-500/30' : 'bg-white/[0.02] border-white/5 hover:border-white/10'}`}>
+    <button 
+      onClick={onLoad}
+      className={`px-3 py-2 text-xs font-medium transition-colors ${isActive ? 'text-indigo-300' : 'text-neutral-400 hover:text-neutral-200'}`}
+    >
+      {preset.name}
+    </button>
+    {!preset.builtIn && onDelete && (
+      <button 
+        onClick={onDelete}
+        className="pr-2 text-neutral-600 hover:text-red-400 transition-colors"
+        title="Delete"
+      >
+        <Trash2 className="w-3 h-3" />
+      </button>
+    )}
+  </div>
+);
+
 export const PresetsPanel: React.FC = () => {
-  const { asciiText, mediaType, isProcessing, videoProgress, gifUrl } = useStore();
+  const { asciiText, mediaType, isProcessing, videoProgress, gifUrl, presets, savePreset, loadPreset, deletePreset } = useStore();
   const [copied, setCopied] = useState(false);
+  const [presetName, setPresetName] = useState('');
+  const [showSaveInput, setShowSaveInput] = useState(false);
   const { convertVideo } = useVideoWorker();
+
+  // Get current settings for active comparison
+  const currentSettings = useStore(s => ({
+    columns: s.columns, charset: s.charset, mode: s.mode, 
+    dither: s.dither, isInverted: s.isInverted, 
+    brightness: s.brightness, contrast: s.contrast, colorMode: s.colorMode
+  }));
+
+  const isPresetActive = (preset: Preset) => {
+    return JSON.stringify(preset.settings) === JSON.stringify(currentSettings);
+  };
 
   const handleCopy = async () => {
     if (!asciiText) return;
@@ -62,6 +103,14 @@ export const PresetsPanel: React.FC = () => {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  };
+
+  const handleSavePreset = () => {
+    const name = presetName.trim();
+    if (!name) return;
+    savePreset(name);
+    setPresetName('');
+    setShowSaveInput(false);
   };
 
   return (
@@ -128,6 +177,55 @@ export const PresetsPanel: React.FC = () => {
                )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Presets Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.15em]">Presets</h3>
+          <button 
+            onClick={() => setShowSaveInput(!showSaveInput)}
+            className="text-neutral-600 hover:text-indigo-400 transition-colors"
+            title="Save current as preset"
+          >
+            <Save className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Save Input */}
+        {showSaveInput && (
+          <div className="flex gap-2">
+            <input 
+              type="text"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+              placeholder="Preset name…"
+              className="flex-1 bg-black/50 border border-white/10 text-xs rounded-lg px-3 py-2 text-neutral-300 focus:outline-none focus:border-indigo-500/30 placeholder-neutral-700"
+              autoFocus
+            />
+            <button 
+              onClick={handleSavePreset}
+              disabled={!presetName.trim()}
+              className="px-3 py-2 bg-indigo-500/20 text-indigo-300 text-xs rounded-lg border border-indigo-500/20 hover:bg-indigo-500/30 transition-all disabled:opacity-40 font-medium"
+            >
+              Save
+            </button>
+          </div>
+        )}
+        
+        {/* Preset Chips */}
+        <div className="flex flex-wrap gap-1.5">
+          {presets.map(preset => (
+            <PresetChip
+              key={preset.name}
+              preset={preset}
+              isActive={isPresetActive(preset)}
+              onLoad={() => loadPreset(preset)}
+              onDelete={!preset.builtIn ? () => deletePreset(preset.name) : undefined}
+            />
+          ))}
         </div>
       </div>
 

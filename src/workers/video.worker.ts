@@ -87,11 +87,11 @@ self.onmessage = async (e) => {
         const imageData = ctx.getImageData(0, 0, bmp.width, bmp.height);
         
         // Convert to ASCII
-        const ascii = convertToAscii(imageData, options);
+        const result = convertToAscii(imageData, { ...options, colorMode: false });
+        const ascii = typeof result === 'string' ? result : result.text;
         asciiFrames.push(ascii);
         
         // Render ASCII to PNG for GIF
-        // Reuse exportUtils logic approx
         const fontSize = 10;
         const lineHeight = 6;
         const lines = ascii.split('\n');
@@ -109,7 +109,7 @@ self.onmessage = async (e) => {
         outCtx.fillStyle = '#ffffff';
         outCtx.font = `${fontSize}px monospace`; // Standard font
         outCtx.textBaseline = 'top';
-        lines.forEach((line, i) => outCtx.fillText(line, 0, i * lineHeight));
+        lines.forEach((line: string, i: number) => outCtx.fillText(line, 0, i * lineHeight));
         
         const outBlob = await outCanvas.convertToBlob({ type: 'image/png' });
         const outData = await blobToUint8Array(outBlob);

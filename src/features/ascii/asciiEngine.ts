@@ -5,6 +5,12 @@ export interface AsciiOptions {
   isInverted: boolean;
   brightness: number;
   contrast: number;
+  colorMode?: boolean;
+}
+
+export interface ColorAsciiResult {
+  text: string;
+  html: string;
 }
 
 /** Area-average resize with integrated grayscale conversion */
@@ -43,6 +49,43 @@ const resizeImage = (srcData: ImageData, width: number, height: number): Float32
   return dest;
 };
 
+/** Area-average resize preserving RGB channels */
+const resizeImageColor = (srcData: ImageData, width: number, height: number): Uint8ClampedArray => {
+  const srcW = srcData.width;
+  const srcH = srcData.height;
+  const dest = new Uint8ClampedArray(width * height * 3);
+  
+  const xRatio = srcW / width;
+  const yRatio = srcH / height;
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const srcXStart = Math.floor(x * xRatio);
+      const srcYStart = Math.floor(y * yRatio);
+      const srcXEnd = Math.min(Math.ceil((x + 1) * xRatio), srcW);
+      const srcYEnd = Math.min(Math.ceil((y + 1) * yRatio), srcH);
+      
+      let rSum = 0, gSum = 0, bSum = 0, count = 0;
+      
+      for (let sy = srcYStart; sy < srcYEnd; sy++) {
+        for (let sx = srcXStart; sx < srcXEnd; sx++) {
+          const off = (sy * srcW + sx) * 4;
+          rSum += srcData.data[off];
+          gSum += srcData.data[off + 1];
+          bSum += srcData.data[off + 2];
+          count++;
+        }
+      }
+      
+      const dOff = (y * width + x) * 3;
+      dest[dOff] = count > 0 ? rSum / count : 0;
+      dest[dOff + 1] = count > 0 ? gSum / count : 0;
+      dest[dOff + 2] = count > 0 ? bSum / count : 0;
+    }
+  }
+  return dest;
+};
+
 /** Apply brightness & contrast adjustment */
 const adjustPixel = (gray: number, brightness: number, contrast: number, isInverted: boolean): number => {
   let val = (gray - 128) * contrast + 128 + (brightness - 1.0) * 255;
@@ -76,15 +119,12 @@ export const sobelEdge = (buffer: Float32Array, width: number, height: number): 
   return out;
 };
 
-export const convertToAscii = (srcData: ImageData, options: AsciiOptions): string => {
-  const { columns, charset, isInverted, brightness, contrast, dither } = options;
+export const convertToAscii = (srcData: ImageData, options: AsciiOptions): string | ColorAsciiResult => {
+  const { columns, charset, isInverted, brightness, contrast, dither, colorMode } = options;
   
   const srcW = srcData.width;
   const srcH = srcData.height;
   const aspectRatio = srcW / srcH;
-  
-  // Monospace chars are roughly 2x taller than wide. 
-  // cellRatio ~0.5 compensates so the image maintains its proportions.
   const cellRatio = 0.5;
   const height = Math.max(1, Math.floor(columns / aspectRatio * cellRatio));
   const width = columns;
@@ -92,9 +132,15 @@ export const convertToAscii = (srcData: ImageData, options: AsciiOptions): strin
   // 1. Resize & grayscale
   const grayBuffer = resizeImage(srcData, width, height);
   
+  // Color buffer (only if colorMode)
+  let colorBuffer: Uint8ClampedArray | null = null;
+  if (colorMode) {
+    colorBuffer = resizeImageColor(srcData, width, height);
+  }
+  
   // 2. Adjust brightness/contrast
   const len = charset.length;
-  if (len === 0) return '';
+  if (len === 0) return colorMode ? { text: '', html: '' } : '';
   
   const finalBuffer = new Float32Array(grayBuffer.length);
   for (let i = 0; i < grayBuffer.length; i++) {
@@ -107,23 +153,18 @@ export const convertToAscii = (srcData: ImageData, options: AsciiOptions): strin
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
         const oldVal = finalBuffer[idx];
-        
         const scaled = (oldVal / 255) * (len - 1);
         const quantized = Math.round(scaled);
         const newVal = (quantized / (len - 1)) * 255;
         const quantError = oldVal - newVal;
-        
         finalBuffer[idx] = newVal;
         
         if (x + 1 < width) 
           finalBuffer[y * width + (x + 1)] += quantError * (7 / 16);
-        
         if (y + 1 < height) {
           if (x - 1 >= 0) 
             finalBuffer[(y + 1) * width + (x - 1)] += quantError * (3 / 16);
-          
           finalBuffer[(y + 1) * width + x] += quantError * (5 / 16);
-          
           if (x + 1 < width) 
             finalBuffer[(y + 1) * width + (x + 1)] += quantError * (1 / 16);
         }
@@ -131,12 +172,9 @@ export const convertToAscii = (srcData: ImageData, options: AsciiOptions): strin
     }
   } else if (dither === 'bayer') {
     const bayer = [
-      [ 0, 8, 2, 10],
-      [12, 4, 14,  6],
-      [ 3, 11, 1,  9],
-      [15, 7, 13,  5]
+      [ 0, 8, 2, 10], [12, 4, 14, 6],
+      [ 3, 11, 1, 9], [15, 7, 13, 5]
     ];
-    
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
@@ -149,19 +187,61 @@ export const convertToAscii = (srcData: ImageData, options: AsciiOptions): strin
   }
 
   // 4. Map to characters
-  let output = '';
+  let text = '';
+  let html = '';
+  const buildHtml = colorMode && colorBuffer;
+  
   for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = y * width + x;
-      let val = finalBuffer[idx];
-      if (val < 0) val = 0;
-      if (val > 255) val = 255;
+    if (buildHtml) {
+      let lastR = -1, lastG = -1, lastB = -1;
+      let spanOpen = false;
       
-      const charIndex = Math.floor(((255 - val) / 255) * (len - 0.01));
-      output += charset[Math.floor(charIndex)];
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        let val = finalBuffer[idx];
+        if (val < 0) val = 0;
+        if (val > 255) val = 255;
+        
+        const charIndex = Math.floor(((255 - val) / 255) * (len - 0.01));
+        const ch = charset[Math.floor(charIndex)];
+        text += ch;
+        
+        const cOff = idx * 3;
+        const r = colorBuffer![cOff];
+        const g = colorBuffer![cOff + 1];
+        const b = colorBuffer![cOff + 2];
+        
+        // Only emit new span when color changes
+        if (r !== lastR || g !== lastG || b !== lastB) {
+          if (spanOpen) html += '</span>';
+          html += `<span style="color:rgb(${r},${g},${b})">`;
+          spanOpen = true;
+          lastR = r; lastG = g; lastB = b;
+        }
+        
+        // Escape HTML entities
+        if (ch === '<') html += '&lt;';
+        else if (ch === '>') html += '&gt;';
+        else if (ch === '&') html += '&amp;';
+        else html += ch;
+      }
+      if (spanOpen) html += '</span>';
+      html += '\n';
+    } else {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        let val = finalBuffer[idx];
+        if (val < 0) val = 0;
+        if (val > 255) val = 255;
+        const charIndex = Math.floor(((255 - val) / 255) * (len - 0.01));
+        text += charset[Math.floor(charIndex)];
+      }
     }
-    output += '\n';
+    text += '\n';
   }
 
-  return output;
+  if (colorMode) {
+    return { text, html } as ColorAsciiResult;
+  }
+  return text;
 };

@@ -15,7 +15,9 @@ export const useAsciiWorker = () => {
     isInverted, 
     brightness, 
     contrast,
+    colorMode,
     setAscii,
+    setColorHtml,
     setProcessing
   } = useStore();
 
@@ -26,6 +28,11 @@ export const useAsciiWorker = () => {
     workerRef.current.onmessage = (e) => {
       if (e.data.text) {
         setAscii(e.data.text);
+        if (e.data.html) {
+          setColorHtml(e.data.html);
+        } else {
+          setColorHtml('');
+        }
         setProcessing(false);
       }
     };
@@ -33,7 +40,7 @@ export const useAsciiWorker = () => {
     return () => {
       workerRef.current?.terminate();
     };
-  }, [setAscii, setProcessing]);
+  }, [setAscii, setColorHtml, setProcessing]);
 
   useEffect(() => {
     if (!fileUrl) return;
@@ -63,7 +70,8 @@ export const useAsciiWorker = () => {
           dither,
           isInverted,
           brightness,
-          contrast
+          contrast,
+          colorMode
         }
       });
     };
@@ -74,5 +82,5 @@ export const useAsciiWorker = () => {
 
     return () => clearTimeout(timer);
     
-  }, [fileUrl, columns, charset, dither, isInverted, brightness, contrast, setProcessing]);
+  }, [fileUrl, columns, charset, dither, isInverted, brightness, contrast, colorMode, setProcessing]);
 };
