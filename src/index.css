@@ -5,3 +5,139 @@
     @apply bg-neutral-950 text-neutral-100 font-sans antialiased h-screen w-screen overflow-hidden;
   }
 }
+
+/* Custom scrollbar for sidebar panels */
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgb(64 64 64);
+    border-radius: 9999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgb(82 82 82);
+  }
+}
+
+/* Custom range slider styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 20px;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: rgb(38 38 38);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgb(129 140 248); /* indigo-400 */
+  margin-top: -5px;
+  border: 2px solid rgb(30 27 75); /* dark border */
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px rgba(129, 140, 248, 0.5);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: rgb(38 38 38);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgb(129 140 248);
+  border: 2px solid rgb(30 27 75);
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.3);
+}
+
+/* Larger thumbs on touch devices */
+@media (pointer: coarse) {
+  input[type="range"]::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+    margin-top: -9px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Pink accent for processing sliders */
+.accent-pink input[type="range"]::-webkit-slider-thumb {
+  background: rgb(244 114 182); /* pink-400 */
+  box-shadow: 0 0 8px rgba(244, 114, 182, 0.3);
+}
+
+.accent-pink input[type="range"]::-moz-range-thumb {
+  background: rgb(244 114 182);
+  box-shadow: 0 0 8px rgba(244, 114, 182, 0.3);
+}
+
+/* Subtle noise texture overlay */
+.noise-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  opacity: 0.015;
+  pointer-events: none;
+  z-index: 100;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Custom checkbox as toggle */
+.toggle-switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgb(38 38 38);
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border: 1px solid rgb(64 64 64);
+}
+
+.toggle-switch:checked {
+  background: rgb(99 102 241); /* indigo-500 */
+  border-color: rgb(129 140 248);
+}
+
+.toggle-switch::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: rgb(163 163 163);
+  border-radius: 50%;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.toggle-switch:checked::before {
+  transform: translateX(16px);
+  background: white;
+}

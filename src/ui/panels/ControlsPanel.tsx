@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../state/store';
 import { CHARSETS, sortCharsByDensity } from '../../features/ascii/charsets';
-import { Sliders, Type, Grid, Sun, Moon, Droplet, ChevronDown, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { Sliders, Type, Grid, Sun, Moon, Droplet, ChevronDown, ChevronRight, ArrowUpDown, RotateCcw } from 'lucide-react';
 
 interface ControlSectionProps {
   title: string;
@@ -13,20 +13,20 @@ interface ControlSectionProps {
 const ControlSection = ({ title, icon: Icon, children, defaultOpen = true }: ControlSectionProps) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div className="border border-neutral-800 bg-neutral-900/40 rounded-lg overflow-hidden transition-all duration-200">
+    <div className="border border-white/5 bg-white/[0.02] rounded-xl overflow-hidden">
        <button 
          onClick={() => setIsOpen(!isOpen)}
-         className="w-full flex items-center justify-between p-3 bg-neutral-900/60 hover:bg-neutral-800/80 transition-colors"
+         className="w-full flex items-center justify-between p-3 hover:bg-white/[0.03] transition-colors"
        >
-         <div className="flex items-center gap-2 text-sm font-medium text-neutral-300">
-           <Icon className="w-4 h-4 text-indigo-400" />
+         <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+           <Icon className="w-3.5 h-3.5 text-indigo-400" />
            {title}
          </div>
-         {isOpen ? <ChevronDown className="w-4 h-4 text-neutral-500" /> : <ChevronRight className="w-4 h-4 text-neutral-500" />}
+         {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-neutral-600" /> : <ChevronRight className="w-3.5 h-3.5 text-neutral-600" />}
        </button>
        
        {isOpen && (
-         <div className="p-4 space-y-4 border-t border-neutral-800/50">
+         <div className="px-3 pb-4 space-y-4 border-t border-white/5">
            {children}
          </div>
        )}
@@ -52,14 +52,14 @@ export const ControlsPanel: React.FC = () => {
   };
 
   return (
-    <aside className="bg-black/60 p-4 flex flex-col gap-4 overflow-y-auto h-full backdrop-blur-md w-full">
+    <aside className="bg-neutral-950/80 p-3 flex flex-col gap-3 overflow-y-auto h-full backdrop-blur-md w-full custom-scrollbar">
       
-      {/* Dimensions */}
+      {/* Resolution */}
       <ControlSection title="Geometry" icon={Grid}>
-        <div className="space-y-3">
-          <div className="flex justify-between text-xs text-neutral-400 font-medium">
-            <span>Width Detection</span>
-            <span className="text-white">{columns} ch</span>
+        <div className="space-y-3 pt-3">
+          <div className="flex justify-between text-xs text-neutral-500">
+            <span>Resolution</span>
+            <span className="font-mono text-neutral-300 tabular-nums">{columns} col</span>
           </div>
           <input 
             type="range" 
@@ -68,22 +68,24 @@ export const ControlsPanel: React.FC = () => {
             step="10"
             value={columns} 
             onChange={(e) => updateSettings({ columns: parseInt(e.target.value) })}
-            className="w-full h-2 bg-neutral-800 rounded-full appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
+            className="w-full"
           />
-          <p className="text-[10px] text-neutral-600">Higher resolution = more CPU usage.</p>
+          {columns > 500 && (
+            <p className="text-[10px] text-amber-500/70">⚡ High resolution — may be CPU intensive</p>
+          )}
         </div>
       </ControlSection>
 
       {/* Characters */}
       <ControlSection title="Typography" icon={Type}>
-        <div className="space-y-3">
+        <div className="space-y-3 pt-3">
            {/* Preset Selector */}
-           <div className="flex flex-wrap gap-2">
+           <div className="flex flex-wrap gap-1.5">
              {Object.keys(CHARSETS).map(name => (
                 <button
                   key={name}
                   onClick={() => handlePresetChange(name)}
-                  className={`text-[10px] px-2 py-1 rounded border transition-all ${charset === CHARSETS[name] ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40' : 'bg-neutral-800 text-neutral-400 border-transparent hover:border-neutral-700'}`}
+                  className={`text-[10px] px-2.5 py-1 rounded-full border transition-all font-medium ${charset === CHARSETS[name] ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' : 'bg-white/[0.03] text-neutral-500 border-transparent hover:border-white/10 hover:text-neutral-300'}`}
                 >
                   {name}
                 </button>
@@ -91,88 +93,112 @@ export const ControlsPanel: React.FC = () => {
            </div>
            
            {/* Custom Input */}
-           <div className="space-y-1">
-             <div className="flex justify-between text-xs text-neutral-400">
+           <div className="space-y-1.5">
+             <div className="flex justify-between text-xs text-neutral-500">
                <span>Active Set</span>
-               <button onClick={handleSort} className="flex items-center gap-1 hover:text-indigo-400 transition-colors" title="Sort by Density">
+               <button onClick={handleSort} className="flex items-center gap-1 hover:text-indigo-400 transition-colors text-[10px]" title="Sort by Density">
                  <ArrowUpDown className="w-3 h-3" /> Sort
                </button>
              </div>
              <textarea 
                value={charset}
                onChange={(e) => updateSettings({ charset: e.target.value })}
-               className="w-full bg-neutral-950 border border-neutral-800 text-xs font-mono rounded p-2 text-neutral-300 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-900 min-h-[60px]"
+               className="w-full bg-black/50 border border-white/5 text-xs font-mono rounded-lg p-2.5 text-neutral-300 focus:outline-none focus:border-indigo-500/30 focus:ring-1 focus:ring-indigo-500/10 min-h-[56px] resize-none placeholder-neutral-700"
+               placeholder="Enter custom characters..."
              />
            </div>
            
-           <label className="flex items-center gap-2 text-xs text-neutral-400 cursor-pointer select-none">
+           <label className="flex items-center gap-3 text-xs text-neutral-400 cursor-pointer select-none py-1">
              <input 
                type="checkbox" 
                checked={isInverted}
                onChange={(e) => updateSettings({ isInverted: e.target.checked })}
-               className="rounded bg-neutral-800 border-neutral-700 text-indigo-500 focus:ring-offset-neutral-900"
+               className="toggle-switch"
              />
-             <span className="flex items-center gap-2">
-               Invert Output 
-               <span className="text-[10px] text-neutral-600">(Dark Background Friendly)</span>
-             </span>
+             <span>Invert Output</span>
            </label>
         </div>
       </ControlSection>
 
-      {/* Enhancements */}
+      {/* Processing */}
       <ControlSection title="Processing" icon={Sliders}>
-        <div className="space-y-5">
+        <div className="space-y-4 pt-3">
           {/* Brightness */}
           <div className="space-y-2">
-            <div className="flex justify-between text-xs text-neutral-400">
-              <span className="flex items-center gap-1"><Sun className="w-3 h-3"/> Brightness</span>
-              <span className="text-white">{brightness.toFixed(1)}</span>
+            <div className="flex justify-between text-xs text-neutral-500">
+              <span className="flex items-center gap-1.5"><Sun className="w-3 h-3"/> Brightness</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-neutral-300 tabular-nums">{brightness.toFixed(1)}</span>
+                {brightness !== 1.0 && (
+                  <button 
+                    onClick={() => updateSettings({ brightness: 1.0 })}
+                    className="text-neutral-600 hover:text-indigo-400 transition-colors"
+                    title="Reset"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
             </div>
-            <input 
-              type="range" min="0" max="2" step="0.1"
-              value={brightness} 
-              onChange={(e) => updateSettings({ brightness: parseFloat(e.target.value) })}
-              className="w-full h-2 bg-neutral-800 rounded-full appearance-none cursor-pointer accent-pink-500 hover:accent-pink-400"
-            />
+            <div className="accent-pink">
+              <input 
+                type="range" min="0" max="2" step="0.1"
+                value={brightness} 
+                onChange={(e) => updateSettings({ brightness: parseFloat(e.target.value) })}
+                className="w-full"
+              />
+            </div>
           </div>
 
           {/* Contrast */}
           <div className="space-y-2">
-            <div className="flex justify-between text-xs text-neutral-400">
-              <span className="flex items-center gap-1"><Moon className="w-3 h-3"/> Contrast</span>
-              <span className="text-white">{contrast.toFixed(1)}</span>
+            <div className="flex justify-between text-xs text-neutral-500">
+              <span className="flex items-center gap-1.5"><Moon className="w-3 h-3"/> Contrast</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-neutral-300 tabular-nums">{contrast.toFixed(1)}</span>
+                {contrast !== 1.0 && (
+                  <button 
+                    onClick={() => updateSettings({ contrast: 1.0 })}
+                    className="text-neutral-600 hover:text-indigo-400 transition-colors"
+                    title="Reset"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
             </div>
-            <input 
-              type="range" min="0" max="3" step="0.1"
-              value={contrast} 
-              onChange={(e) => updateSettings({ contrast: parseFloat(e.target.value) })}
-              className="w-full h-2 bg-neutral-800 rounded-full appearance-none cursor-pointer accent-pink-500 hover:accent-pink-400"
-            />
+            <div className="accent-pink">
+              <input 
+                type="range" min="0" max="3" step="0.1"
+                value={contrast} 
+                onChange={(e) => updateSettings({ contrast: parseFloat(e.target.value) })}
+                className="w-full"
+              />
+            </div>
           </div>
           
           {/* Dither */}
-           <div className="space-y-2 pt-2 border-t border-neutral-800">
-             <div className="flex justify-between text-xs text-neutral-400">
-               <span className="flex items-center gap-1"><Droplet className="w-3 h-3"/> Dithering</span>
-             </div>
-             <div className="grid grid-cols-3 gap-2">
-                {(['none', 'bayer', 'floyd'] as const).map(mode => (
-                  <button
-                    key={mode}
-                    onClick={() => updateSettings({ dither: mode })}
-                    className={`px-2 py-1.5 text-[10px] font-medium rounded border transition-all uppercase tracking-wide ${dither === mode ? 'bg-pink-500/20 text-pink-300 border-pink-500/40' : 'bg-neutral-900 text-neutral-500 border-neutral-800 hover:border-neutral-700'}`}
-                  >
-                    {mode}
-                  </button>
-                ))}
-             </div>
-             <p className="text-[10px] text-neutral-600 mt-1">
-               {dither === 'floyd' && "Error diffusion. High quality, organic noise."}
-               {dither === 'bayer' && "Ordered matrix. Retro computer look."}
-               {dither === 'none' && "Standard quantization."}
-             </p>
-           </div>
+          <div className="space-y-2 pt-2 border-t border-white/5">
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+              <Droplet className="w-3 h-3"/> Dithering
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+               {(['none', 'bayer', 'floyd'] as const).map(mode => (
+                 <button
+                   key={mode}
+                   onClick={() => updateSettings({ dither: mode })}
+                   className={`px-2 py-1.5 text-[10px] font-semibold rounded-lg border transition-all uppercase tracking-wider ${dither === mode ? 'bg-pink-500/15 text-pink-300 border-pink-500/25' : 'bg-white/[0.02] text-neutral-600 border-transparent hover:border-white/10 hover:text-neutral-400'}`}
+                 >
+                   {mode}
+                 </button>
+               ))}
+            </div>
+            <p className="text-[10px] text-neutral-600 leading-relaxed">
+              {dither === 'floyd' && "Error diffusion — organic, high detail"}
+              {dither === 'bayer' && "Ordered matrix — retro, patterned"}
+              {dither === 'none' && "Standard quantization"}
+            </p>
+          </div>
         </div>
       </ControlSection>
 

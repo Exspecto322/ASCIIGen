@@ -9,7 +9,7 @@ export const MainLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'tune' | 'preview' | 'export'>('preview');
 
   return (
-    <div className="flex flex-col h-screen bg-neutral-950 text-neutral-200 overflow-hidden selection:bg-indigo-500/30">
+    <div className="flex flex-col h-screen bg-neutral-950 text-neutral-200 overflow-hidden selection:bg-indigo-500/30 noise-bg">
       <Header />
       
       {/* Desktop Grid Layout */}

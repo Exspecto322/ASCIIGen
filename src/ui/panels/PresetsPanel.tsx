@@ -4,6 +4,27 @@ import { copyToClipboard, downloadTxt, downloadPng } from '../../features/ascii/
 import { useVideoWorker } from '../../features/video/useVideoWorker';
 import { Copy, FileText, Image as ImageIcon, Check, Film, Loader2 } from 'lucide-react';
 
+const ExportButton = ({ 
+  onClick, disabled, icon: Icon, iconColor, label 
+}: { 
+  onClick: () => void; 
+  disabled: boolean; 
+  icon: React.ElementType; 
+  iconColor: string; 
+  label: string;
+}) => (
+  <button 
+    onClick={onClick}
+    disabled={disabled}
+    className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/[0.03] group active:scale-[0.98]"
+  >
+    <div className={`w-8 h-8 rounded-lg ${iconColor} flex items-center justify-center shrink-0`}>
+      <Icon className="w-4 h-4 text-white" />
+    </div>
+    <span className="text-sm text-neutral-300 group-hover:text-neutral-100 transition-colors">{label}</span>
+  </button>
+);
+
 export const PresetsPanel: React.FC = () => {
   const { asciiText, mediaType, isProcessing, videoProgress, gifUrl } = useStore();
   const [copied, setCopied] = useState(false);
@@ -44,87 +65,77 @@ export const PresetsPanel: React.FC = () => {
   };
 
   return (
-    <aside className="bg-neutral-900/50 p-6 flex flex-col gap-8 overflow-y-auto backdrop-blur-sm h-full w-full">
+    <aside className="bg-neutral-950/80 p-4 flex flex-col gap-6 overflow-y-auto backdrop-blur-md h-full w-full custom-scrollbar">
       
       {/* Export Section */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Export</h3>
+      <div className="space-y-3">
+        <h3 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.15em]">Export</h3>
         
-        <div className="grid grid-cols-1 gap-2">
-           {/* Image/Text Exports */}
-           <button 
-             onClick={handleCopy}
-             disabled={!asciiText || isProcessing}
-             className="flex items-center justify-between p-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
-           >
-             <span className="flex items-center gap-2 text-sm text-neutral-300">
-               {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-indigo-400" />}
-               <span>Copy Text</span>
-             </span>
-           </button>
+        <div className="flex flex-col gap-2">
+          <ExportButton
+            onClick={handleCopy}
+            disabled={!asciiText || isProcessing}
+            icon={copied ? Check : Copy}
+            iconColor={copied ? 'bg-green-500/20' : 'bg-indigo-500/20'}
+            label={copied ? 'Copied!' : 'Copy Text'}
+          />
 
-           <button 
-             onClick={handleDownloadTxt}
-             disabled={!asciiText || isProcessing}
-             className="flex items-center justify-between p-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
-           >
-             <span className="flex items-center gap-2 text-sm text-neutral-300">
-               <FileText className="w-4 h-4 text-blue-400" />
-               <span>Save as .TXT</span>
-             </span>
-           </button>
+          <ExportButton
+            onClick={handleDownloadTxt}
+            disabled={!asciiText || isProcessing}
+            icon={FileText}
+            iconColor="bg-blue-500/20"
+            label="Save as .TXT"
+          />
 
-           <button 
-             onClick={handleDownloadPng}
-             disabled={!asciiText || isProcessing}
-             className="flex items-center justify-between p-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
-           >
-             <span className="flex items-center gap-2 text-sm text-neutral-300">
-               <ImageIcon className="w-4 h-4 text-pink-400" />
-               <span>Save as .PNG</span>
-             </span>
-           </button>
+          <ExportButton
+            onClick={handleDownloadPng}
+            disabled={!asciiText || isProcessing}
+            icon={ImageIcon}
+            iconColor="bg-pink-500/20"
+            label="Save as .PNG"
+          />
 
-           {/* Video Export */}
-           {(mediaType === 'video' || mediaType === 'gif') && (
-             <div className="pt-4 border-t border-neutral-800 space-y-2">
-                {!gifUrl ? (
-                   <button 
-                     onClick={handleExportGif}
-                     disabled={isProcessing}
-                     className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium shadow-lg shadow-indigo-900/20"
-                   >
-                     {isProcessing ? (
-                       <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>{Math.round(videoProgress * 100)}%</span>
-                       </>
-                     ) : (
-                       <>
-                        <Film className="w-4 h-4" />
-                        <span>Render GIF</span>
-                       </>
-                     )}
-                   </button>
-                ) : (
-                   <button 
-                     onClick={handleDownloadGif}
-                     className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-green-600 hover:bg-green-500 transition-colors text-white font-medium shadow-lg shadow-green-900/20"
-                   >
-                     <Film className="w-4 h-4" />
-                     <span>Download GIF</span>
-                   </button>
-                )}
-             </div>
-           )}
+          {/* Video Export */}
+          {(mediaType === 'video' || mediaType === 'gif') && (
+            <div className="pt-3 border-t border-white/5">
+               {!gifUrl ? (
+                  <button 
+                    onClick={handleExportGif}
+                    disabled={isProcessing}
+                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-indigo-300 font-medium active:scale-[0.98]"
+                  >
+                    {isProcessing ? (
+                      <>
+                       <Loader2 className="w-4 h-4 animate-spin" />
+                       <span className="font-mono tabular-nums">{Math.round(videoProgress * 100)}%</span>
+                      </>
+                    ) : (
+                      <>
+                       <Film className="w-4 h-4" />
+                       <span>Render GIF</span>
+                      </>
+                    )}
+                  </button>
+               ) : (
+                  <button 
+                    onClick={handleDownloadGif}
+                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-green-500/15 hover:bg-green-500/25 border border-green-500/20 transition-all text-green-300 font-medium active:scale-[0.98]"
+                  >
+                    <Film className="w-4 h-4" />
+                    <span>Download GIF</span>
+                  </button>
+               )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Presets (Placeholder for now) */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Presets</h3>
-        <div className="p-4 rounded-lg bg-neutral-800/50 border border-neutral-800 text-center text-sm text-neutral-500 italic">
-          Coming Soon
+      {/* Info */}
+      <div className="mt-auto pt-4 border-t border-white/5">
+        <div className="text-[10px] text-neutral-700 space-y-1 leading-relaxed">
+          <p>ASCII art generated client-side.</p>
+          <p>No data leaves your browser.</p>
         </div>
       </div>
     </aside>
