@@ -44,7 +44,7 @@ export const PresetsPanel: React.FC = () => {
   };
 
   return (
-    <aside className="border-l border-neutral-800 bg-neutral-900/50 p-6 flex flex-col gap-8 overflow-y-auto backdrop-blur-sm h-full">
+    <aside className="bg-neutral-900/50 p-6 flex flex-col gap-8 overflow-y-auto backdrop-blur-sm h-full w-full">
       
       {/* Export Section */}
       <div className="space-y-4">

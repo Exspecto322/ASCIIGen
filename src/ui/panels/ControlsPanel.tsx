@@ -52,7 +52,7 @@ export const ControlsPanel: React.FC = () => {
   };
 
   return (
-    <aside className="border-r border-neutral-800 bg-black/60 p-4 flex flex-col gap-4 overflow-y-auto h-full backdrop-blur-md w-80 shrink-0">
+    <aside className="bg-black/60 p-4 flex flex-col gap-4 overflow-y-auto h-full backdrop-blur-md w-full">
       
       {/* Dimensions */}
       <ControlSection title="Geometry" icon={Grid}>
