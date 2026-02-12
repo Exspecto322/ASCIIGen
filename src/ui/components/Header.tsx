@@ -11,7 +11,7 @@ export const Header: React.FC = () => {
         </span>
       </div>
       
-      <div className="flex items-center gap-1">
+      <div className="hidden md:flex items-center gap-1">
         <button className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-neutral-800 transition-colors text-sm text-neutral-400 hover:text-neutral-200">
           <Upload className="w-4 h-4" />
           <span>Import</span>

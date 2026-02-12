@@ -13,7 +13,7 @@ export const MainLayout: React.FC = () => {
       <Header />
       
       {/* Desktop Grid Layout */}
-      <main className="flex-1 hidden lg:grid grid-cols-[300px_1fr_300px] overflow-hidden">
+      <main className="flex-1 hidden md:grid grid-cols-[300px_1fr_300px] overflow-hidden">
         <div className="border-r border-neutral-800 h-full overflow-hidden">
           <ControlsPanel />
         </div>
@@ -26,7 +26,7 @@ export const MainLayout: React.FC = () => {
       </main>
 
       {/* Mobile Flex Layout */}
-      <main className="flex-1 lg:hidden flex flex-col overflow-hidden relative">
+      <main className="flex-1 md:hidden flex flex-col overflow-hidden relative">
         <div className="flex-1 overflow-hidden relative">
            <div className={`absolute inset-0 ${activeTab === 'tune' ? 'z-10' : 'z-0 invisible'}`}>
              <ControlsPanel />
