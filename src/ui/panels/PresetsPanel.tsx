@@ -149,7 +149,7 @@ export const PresetsPanel: React.FC = () => {
   };
 
   return (
-    <aside className="bg-neutral-950/80 p-4 flex flex-col gap-6 overflow-y-auto backdrop-blur-md h-full w-full custom-scrollbar">
+    <aside className="bg-neutral-950/80 p-4 flex flex-col gap-6 backdrop-blur-md w-full">
       
       <div className="space-y-3">
         <h3 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.15em]">Export</h3>

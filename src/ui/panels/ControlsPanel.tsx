@@ -14,10 +14,10 @@ interface ControlSectionProps {
 const ControlSection = ({ title, icon: Icon, children, defaultOpen = true }: ControlSectionProps) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div className="border border-white/5 bg-white/[0.02] rounded-xl overflow-hidden">
+    <div className="border border-white/5 bg-white/[0.02] rounded-xl shrink-0">
        <button 
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between p-3 hover:bg-white/[0.03] transition-colors"
+          className={`w-full flex items-center justify-between p-3 hover:bg-white/[0.03] transition-colors ${!isOpen ? 'rounded-xl' : 'rounded-t-xl'}`}
         >
           <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
             <Icon className="w-3.5 h-3.5 text-indigo-400" />
@@ -67,7 +67,7 @@ export const ControlsPanel: React.FC = () => {
   };
 
   return (
-    <aside className="bg-neutral-950/80 p-3 flex flex-col gap-3 overflow-y-auto h-full backdrop-blur-md w-full custom-scrollbar">
+    <aside className="bg-neutral-950/80 p-3 flex flex-col gap-3 backdrop-blur-md w-full">
       
       <ControlSection title="Geometry" icon={Grid}>
         <div className="space-y-3 pt-3">
