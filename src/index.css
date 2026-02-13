@@ -1,9 +1,16 @@
 @import "tailwindcss";
 
-@layer base {
-  body {
-    @apply bg-neutral-950 text-neutral-100 font-sans antialiased h-screen w-screen overflow-hidden;
-  }
+body {
+  background-color: rgb(10 10 10); /* neutral-950 */
+  color: rgb(245 245 245); /* neutral-100 */
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  margin: 0;
 }
 
 /* Custom scrollbar for sidebar panels */
