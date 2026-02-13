@@ -93,7 +93,7 @@ self.onmessage = async (e) => {
         
         // Render ASCII to PNG for GIF
         const fontSize = 10;
-        const lineHeight = 6;
+        const lineHeight = 12; // 1.15em of fontSize 10
         const lines = ascii.split('\n');
         // Uniform width...
         const charWidth = 6; // Approx

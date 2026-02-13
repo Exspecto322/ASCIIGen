@@ -43,7 +43,7 @@ export const generatePngBlob = (
     ctx.font = font;
     const metrics = ctx.measureText('M');
     const charWidth = metrics.width;
-    const lh = parseFloat(font) * 0.6;
+    const lh = parseFloat(font) * 1.15;
 
     const width = lines[0].length * charWidth;
     const height = lines.length * lh;
@@ -90,7 +90,7 @@ export const generateColorPngBlob = (
 
     ctx.font = font;
     const charWidth = ctx.measureText('M').width;
-    const lh = parseFloat(font) * 0.6;
+    const lh = parseFloat(font) * 1.15;
 
     // Estimate width from first line char count
     const firstLineChars = htmlLines[0].replace(/<[^>]*>/g, '').length;
