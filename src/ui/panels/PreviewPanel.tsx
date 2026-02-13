@@ -334,13 +334,12 @@ export const PreviewPanel: React.FC = () => {
 
           <div ref={containerRef} className="w-full h-full flex items-center justify-center overflow-auto p-4 cursor-grab active:cursor-grabbing custom-scrollbar">
             <div 
-              className="origin-center transition-transform duration-150 ease-out relative"
+              className="origin-center transition-transform duration-150 ease-out relative overflow-hidden"
               style={{ 
                 transform: `scale(${zoom})`, 
                 backgroundColor: colorMode ? '#000000' : bgColor,
                 ...(pp.crtCurve ? {
                   borderRadius: '8px',
-                  overflow: 'hidden',
                   perspective: '800px',
                   transformStyle: 'preserve-3d' as const,
                 } : {}),

@@ -14,13 +14,13 @@ export const MainLayout: React.FC = () => {
       
       {/* Desktop Grid Layout */}
       <main className="flex-1 hidden md:grid grid-cols-[300px_1fr_300px] overflow-hidden">
-        <div className="border-r border-neutral-800 h-full overflow-hidden">
+        <div className="border-r border-neutral-800 h-full overflow-hidden isolate">
           <ControlsPanel />
         </div>
-        <div className="h-full overflow-hidden">
+        <div className="h-full overflow-hidden isolate">
           <PreviewPanel />
         </div>
-        <div className="border-l border-neutral-800 h-full overflow-hidden">
+        <div className="border-l border-neutral-800 h-full overflow-hidden isolate">
           <PresetsPanel />
         </div>
       </main>
