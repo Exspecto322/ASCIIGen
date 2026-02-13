@@ -146,30 +146,46 @@ export const PreviewPanel: React.FC = () => {
     return () => window.removeEventListener('paste', handlePaste);
   }, [setFile]);
 
-  // Auto-zoom to fit
+  // Calculate fit zoom based on container and content size
+  const recalcFitZoom = useCallback(() => {
+    if (zoomMode !== 'fit' || !containerRef.current || !asciiText) return;
+    const lines = asciiText.split('\n');
+    if (lines.length === 0) return;
+    const textCols = lines[0].length;
+    const textRows = lines.length;
+    
+    const containerW = containerRef.current.clientWidth;
+    const containerH = containerRef.current.clientHeight;
+    if (containerW === 0 || containerH === 0) return;
+    
+    // Character cell dimensions at font-size: 8px
+    // Monospace chars are ~4.8px wide, line-height is 1.15em = 9.2px
+    const CW = 4.8;
+    const CH = 9.2;
+    
+    const contentW = textCols * CW;
+    const contentH = textRows * CH;
+    
+    const pad = 32;
+    const scaleX = (containerW - pad) / contentW;
+    const scaleY = (containerH - pad) / contentH;
+    
+    const scale = Math.min(scaleX, scaleY, 1.0);
+    setZoom(Math.max(0.05, scale));
+  }, [asciiText, zoomMode]);
+
+  // Auto-zoom to fit on content change
   useEffect(() => {
-    if (zoomMode === 'fit' && containerRef.current && asciiText) {
-      const lines = asciiText.split('\n');
-      if (lines.length === 0) return;
-      const textCols = lines[0].length;
-      const textRows = lines.length;
-      
-      const containerW = containerRef.current.clientWidth;
-      const containerH = containerRef.current.clientHeight;
-      
-      const CW = 4.8;
-      const CH = 4.8;
-      
-      const contentW = textCols * CW;
-      const contentH = textRows * CH;
-      
-      const scaleX = (containerW - 40) / contentW;
-      const scaleY = (containerH - 40) / contentH;
-      
-      const scale = Math.min(scaleX, scaleY, 1.0);
-      setZoom(Math.max(0.05, scale));
-    }
-  }, [asciiText, zoomMode, columns]);
+    recalcFitZoom();
+  }, [recalcFitZoom, columns]);
+
+  // Re-fit on container resize (mobile sheet open/close, window resize)
+  useEffect(() => {
+    if (!containerRef.current || zoomMode !== 'fit') return;
+    const ro = new ResizeObserver(() => recalcFitZoom());
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [zoomMode, recalcFitZoom]);
 
   const handleZoomIn = () => {
     setZoomMode('manual');
@@ -199,7 +215,7 @@ export const PreviewPanel: React.FC = () => {
 
   const fontStyle = {
     fontFamily: '"Cascadia Code", "Consolas", "Courier New", monospace',
-    lineHeight: '0.6em',
+    lineHeight: '1.15em',
   };
 
   return (
@@ -332,9 +348,9 @@ export const PreviewPanel: React.FC = () => {
             </>
           )}
 
-          <div ref={containerRef} className="w-full h-full flex items-center justify-center overflow-auto p-4 cursor-grab active:cursor-grabbing custom-scrollbar">
+          <div ref={containerRef} className="w-full h-full flex items-center justify-center overflow-auto p-2 md:p-4 cursor-grab active:cursor-grabbing custom-scrollbar">
             <div 
-              className="origin-center transition-transform duration-150 ease-out relative overflow-hidden"
+              className="origin-center transition-transform duration-150 ease-out relative overflow-hidden shrink-0"
               style={{ 
                 transform: `scale(${zoom})`, 
                 backgroundColor: colorMode ? '#000000' : bgColor,
