@@ -7,11 +7,15 @@ export interface Settings {
   columns: number;
   charset: string;
   mode: 'standard' | 'edge';
-  dither: 'none' | 'bayer' | 'floyd';
+  dither: 'none' | 'bayer' | 'floyd' | 'atkinson' | 'stucki' | 'sierra';
   isInverted: boolean;
   brightness: number;
   contrast: number;
+  saturation: number;
+  gamma: number;
   colorMode: boolean;
+  fgColor: string;
+  bgColor: string;
 }
 
 export interface Preset {
@@ -58,10 +62,12 @@ export interface AppState extends Settings {
 const STORAGE_KEY = 'asciigen-presets';
 
 const BUILT_IN_PRESETS: Preset[] = [
-  { name: 'Photo', builtIn: true, settings: { columns: 120, charset: '@%#*+=-:. ', mode: 'standard', dither: 'none', isInverted: false, brightness: 1.0, contrast: 1.0, colorMode: false }},
-  { name: 'Retro', builtIn: true, settings: { columns: 80, charset: '█▓▒░ ', mode: 'standard', dither: 'bayer', isInverted: false, brightness: 1.0, contrast: 1.2, colorMode: false }},
-  { name: 'Minimal', builtIn: true, settings: { columns: 100, charset: '#+-. ', mode: 'standard', dither: 'none', isInverted: false, brightness: 1.0, contrast: 1.0, colorMode: false }},
-  { name: 'Matrix', builtIn: true, settings: { columns: 150, charset: '0123456789abcdef', mode: 'standard', dither: 'floyd', isInverted: true, brightness: 0.8, contrast: 1.3, colorMode: true }},
+  { name: 'Photo', builtIn: true, settings: { columns: 120, charset: '@%#*+=-:. ', mode: 'standard', dither: 'none', isInverted: false, brightness: 1.0, contrast: 1.0, saturation: 1.0, gamma: 1.0, colorMode: false, fgColor: '#ffffff', bgColor: '#000000' }},
+  { name: 'Retro', builtIn: true, settings: { columns: 80, charset: '█▓▒░ ', mode: 'standard', dither: 'bayer', isInverted: false, brightness: 1.0, contrast: 1.2, saturation: 1.0, gamma: 1.0, colorMode: false, fgColor: '#33ff33', bgColor: '#0a0a0a' }},
+  { name: 'Minimal', builtIn: true, settings: { columns: 100, charset: '#+-. ', mode: 'standard', dither: 'none', isInverted: false, brightness: 1.0, contrast: 1.0, saturation: 1.0, gamma: 1.0, colorMode: false, fgColor: '#ffffff', bgColor: '#000000' }},
+  { name: 'Matrix', builtIn: true, settings: { columns: 150, charset: '0123456789abcdef', mode: 'standard', dither: 'floyd', isInverted: true, brightness: 0.8, contrast: 1.3, saturation: 1.0, gamma: 1.0, colorMode: true, fgColor: '#00ff41', bgColor: '#0d0208' }},
+  { name: 'Amber CRT', builtIn: true, settings: { columns: 100, charset: '@%#*+=-:. ', mode: 'standard', dither: 'none', isInverted: false, brightness: 1.1, contrast: 1.2, saturation: 1.0, gamma: 0.9, colorMode: false, fgColor: '#ffb000', bgColor: '#1a0800' }},
+  { name: 'High Detail', builtIn: true, settings: { columns: 200, charset: " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$", mode: 'standard', dither: 'floyd', isInverted: false, brightness: 1.0, contrast: 1.1, saturation: 1.2, gamma: 1.0, colorMode: false, fgColor: '#ffffff', bgColor: '#000000' }},
 ];
 
 const loadPresets = (): Preset[] => {
@@ -87,7 +93,11 @@ const DEFAULT_SETTINGS: Settings = {
   isInverted: false,
   brightness: 1.0,
   contrast: 1.0,
+  saturation: 1.0,
+  gamma: 1.0,
   colorMode: false,
+  fgColor: '#ffffff',
+  bgColor: '#000000',
 };
 
 export const useStore = create<AppState>((set, get) => ({
@@ -149,7 +159,11 @@ export const useStore = create<AppState>((set, get) => ({
       isInverted: state.isInverted,
       brightness: state.brightness,
       contrast: state.contrast,
+      saturation: state.saturation,
+      gamma: state.gamma,
       colorMode: state.colorMode,
+      fgColor: state.fgColor,
+      bgColor: state.bgColor,
     };
     const newPreset: Preset = { name, settings };
     const existing = get().presets;

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../state/store';
 import { useShallow } from 'zustand/react/shallow';
 import { CHARSETS, sortCharsByDensity } from '../../features/ascii/charsets';
-import { Sliders, Type, Grid, Sun, Moon, Droplet, ChevronDown, ChevronRight, ArrowUpDown, RotateCcw, Palette } from 'lucide-react';
+import { Sliders, Type, Grid, Sun, Moon, Droplet, ChevronDown, ChevronRight, ArrowUpDown, RotateCcw, Palette, Contrast, Gauge } from 'lucide-react';
 
 interface ControlSectionProps {
   title: string;
@@ -16,27 +16,27 @@ const ControlSection = ({ title, icon: Icon, children, defaultOpen = true }: Con
   return (
     <div className="border border-white/5 bg-white/[0.02] rounded-xl overflow-hidden">
        <button 
-         onClick={() => setIsOpen(!isOpen)}
-         className="w-full flex items-center justify-between p-3 hover:bg-white/[0.03] transition-colors"
-       >
-         <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-           <Icon className="w-3.5 h-3.5 text-indigo-400" />
-           {title}
-         </div>
-         {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-neutral-600" /> : <ChevronRight className="w-3.5 h-3.5 text-neutral-600" />}
-       </button>
-       
-       {isOpen && (
-         <div className="px-3 pb-4 space-y-4 border-t border-white/5">
-           {children}
-         </div>
-       )}
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between p-3 hover:bg-white/[0.03] transition-colors"
+        >
+          <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+            <Icon className="w-3.5 h-3.5 text-indigo-400" />
+            {title}
+          </div>
+          {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-neutral-600" /> : <ChevronRight className="w-3.5 h-3.5 text-neutral-600" />}
+        </button>
+        
+        {isOpen && (
+          <div className="px-3 pb-4 space-y-4 border-t border-white/5">
+            {children}
+          </div>
+        )}
     </div>
   );
 };
 
 export const ControlsPanel: React.FC = () => {
-  const { columns, charset, dither, isInverted, brightness, contrast, colorMode } = useStore(
+  const { columns, charset, dither, isInverted, brightness, contrast, saturation, gamma, colorMode, fgColor, bgColor } = useStore(
     useShallow(s => ({
       columns: s.columns,
       charset: s.charset,
@@ -44,7 +44,11 @@ export const ControlsPanel: React.FC = () => {
       isInverted: s.isInverted,
       brightness: s.brightness,
       contrast: s.contrast,
+      saturation: s.saturation,
+      gamma: s.gamma,
       colorMode: s.colorMode,
+      fgColor: s.fgColor,
+      bgColor: s.bgColor,
     }))
   );
 
@@ -101,29 +105,29 @@ export const ControlsPanel: React.FC = () => {
            
            <div className="space-y-1.5">
              <div className="flex justify-between text-xs text-neutral-500">
-               <span>Active Set</span>
-               <button onClick={handleSort} className="flex items-center gap-1 hover:text-indigo-400 transition-colors text-[10px]" title="Sort by Density">
-                 <ArrowUpDown className="w-3 h-3" /> Sort
-               </button>
-             </div>
+                <span>Active Set</span>
+                <button onClick={handleSort} className="flex items-center gap-1 hover:text-indigo-400 transition-colors text-[10px]" title="Sort by Density">
+                  <ArrowUpDown className="w-3 h-3" /> Sort
+                </button>
+              </div>
              <textarea 
-               value={charset}
-               onChange={(e) => updateSettings({ charset: e.target.value })}
-               className="w-full bg-black/50 border border-white/5 text-xs font-mono rounded-lg p-2.5 text-neutral-300 focus:outline-none focus:border-indigo-500/30 focus:ring-1 focus:ring-indigo-500/10 min-h-[56px] resize-none placeholder-neutral-700"
-               placeholder="Enter custom characters..."
-             />
+                value={charset}
+                onChange={(e) => updateSettings({ charset: e.target.value })}
+                className="w-full bg-black/50 border border-white/5 text-xs font-mono rounded-lg p-2.5 text-neutral-300 focus:outline-none focus:border-indigo-500/30 focus:ring-1 focus:ring-indigo-500/10 min-h-[56px] resize-none placeholder-neutral-700"
+                placeholder="Enter custom characters..."
+              />
            </div>
            
            <div className="flex flex-col gap-2">
              <label className="flex items-center gap-3 text-xs text-neutral-400 cursor-pointer select-none py-1">
-               <input 
-                 type="checkbox" 
-                 checked={isInverted}
-                 onChange={(e) => updateSettings({ isInverted: e.target.checked })}
-                 className="toggle-switch"
-               />
-               <span>Invert Output</span>
-             </label>
+                <input 
+                  type="checkbox" 
+                  checked={isInverted}
+                  onChange={(e) => updateSettings({ isInverted: e.target.checked })}
+                  className="toggle-switch"
+                />
+                <span>Invert Output</span>
+              </label>
            </div>
         </div>
       </ControlSection>
@@ -150,6 +154,35 @@ export const ControlsPanel: React.FC = () => {
               : "Standard monochrome ASCII output"
             }
           </p>
+
+          {!colorMode && (
+            <div className="space-y-2 pt-2 border-t border-white/5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-neutral-500">Foreground</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-neutral-400">{fgColor}</span>
+                  <input 
+                    type="color" 
+                    value={fgColor}
+                    onChange={(e) => updateSettings({ fgColor: e.target.value })}
+                    className="w-6 h-6 rounded border border-white/10 bg-transparent cursor-pointer"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-neutral-500">Background</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-neutral-400">{bgColor}</span>
+                  <input 
+                    type="color" 
+                    value={bgColor}
+                    onChange={(e) => updateSettings({ bgColor: e.target.value })}
+                    className="w-6 h-6 rounded border border-white/10 bg-transparent cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </ControlSection>
 
@@ -206,13 +239,67 @@ export const ControlsPanel: React.FC = () => {
               />
             </div>
           </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs text-neutral-500">
+              <span className="flex items-center gap-1.5"><Contrast className="w-3 h-3"/> Saturation</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-neutral-300 tabular-nums">{saturation.toFixed(1)}</span>
+                {saturation !== 1.0 && (
+                  <button 
+                    onClick={() => updateSettings({ saturation: 1.0 })}
+                    className="text-neutral-600 hover:text-indigo-400 transition-colors"
+                    title="Reset"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="accent-pink">
+              <input 
+                type="range" min="0" max="3" step="0.1"
+                value={saturation} 
+                onChange={(e) => updateSettings({ saturation: parseFloat(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+            <p className="text-[10px] text-neutral-600">Only affects color mode output</p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs text-neutral-500">
+              <span className="flex items-center gap-1.5"><Gauge className="w-3 h-3"/> Gamma</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-neutral-300 tabular-nums">{gamma.toFixed(1)}</span>
+                {gamma !== 1.0 && (
+                  <button 
+                    onClick={() => updateSettings({ gamma: 1.0 })}
+                    className="text-neutral-600 hover:text-indigo-400 transition-colors"
+                    title="Reset"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="accent-pink">
+              <input 
+                type="range" min="0.3" max="3.0" step="0.1"
+                value={gamma} 
+                onChange={(e) => updateSettings({ gamma: parseFloat(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+            <p className="text-[10px] text-neutral-600">&lt;1.0 brightens shadows · &gt;1.0 deepens shadows</p>
+          </div>
           
           <div className="space-y-2 pt-2 border-t border-white/5">
             <div className="flex items-center gap-1.5 text-xs text-neutral-500">
               <Droplet className="w-3 h-3"/> Dithering
             </div>
             <div className="grid grid-cols-3 gap-1.5">
-               {(['none', 'bayer', 'floyd'] as const).map(mode => (
+               {(['none', 'bayer', 'floyd', 'atkinson', 'stucki', 'sierra'] as const).map(mode => (
                  <button
                    key={mode}
                    onClick={() => updateSettings({ dither: mode })}
@@ -223,8 +310,11 @@ export const ControlsPanel: React.FC = () => {
                ))}
             </div>
             <p className="text-[10px] text-neutral-600 leading-relaxed">
-              {dither === 'floyd' && "Error diffusion — organic, high detail"}
+              {dither === 'floyd' && "Floyd-Steinberg — organic, high detail"}
               {dither === 'bayer' && "Ordered matrix — retro, patterned"}
+              {dither === 'atkinson' && "Atkinson — sharp, preserves detail"}
+              {dither === 'stucki' && "Stucki — smooth gradients, wide diffusion"}
+              {dither === 'sierra' && "Sierra — balanced detail & smoothness"}
               {dither === 'none' && "Standard quantization"}
             </p>
           </div>

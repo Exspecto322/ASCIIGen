@@ -5,6 +5,11 @@ export const CHARSETS: Record<string, string> = {
   Binary: '01 ',
   Matrix: '0123456789abcdef',
   Edges: '/|\\- ',
+  Detailed: " .'`^\":;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",
+  Alphabetic: ' .icotCOXWM',
+  Numeric: ' 1234567890',
+  Math: ' .-+×÷=≠<>≤≥∞∑∏√∫',
+  Symbols: ' ·•○◎●◐◑◒◓◔◕◖◗',
 };
 
 export const getCharset = (name: string): string => {

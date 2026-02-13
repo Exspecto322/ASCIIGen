@@ -1,10 +1,12 @@
 export interface AsciiOptions {
   columns: number;
   charset: string;
-  dither: 'none' | 'bayer' | 'floyd';
+  dither: 'none' | 'bayer' | 'floyd' | 'atkinson' | 'stucki' | 'sierra';
   isInverted: boolean;
   brightness: number;
   contrast: number;
+  saturation: number;
+  gamma: number;
   colorMode?: boolean;
 }
 
@@ -87,10 +89,14 @@ const resizeImageColor = (srcData: ImageData, width: number, height: number): Ui
 };
 
 /** Apply brightness & contrast adjustment */
-const adjustPixel = (gray: number, brightness: number, contrast: number, isInverted: boolean): number => {
+const adjustPixel = (gray: number, brightness: number, contrast: number, isInverted: boolean, gamma: number): number => {
   let val = (gray - 128) * contrast + 128 + (brightness - 1.0) * 255;
   if (val < 0) val = 0;
   if (val > 255) val = 255;
+  // Gamma correction
+  if (gamma !== 1.0) {
+    val = 255 * Math.pow(val / 255, 1.0 / gamma);
+  }
   if (isInverted) return 255 - val;
   return val;
 };
@@ -119,8 +125,35 @@ export const sobelEdge = (buffer: Float32Array, width: number, height: number): 
   return out;
 };
 
+/** Generic error-diffusion dithering.
+ *  coefficients = array of [dx, dy, weight] */
+const applyErrorDiffusion = (
+  buffer: Float32Array, width: number, height: number, levels: number,
+  coefficients: number[][]
+) => {
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      const oldVal = buffer[idx];
+      const scaled = (oldVal / 255) * (levels - 1);
+      const quantized = Math.round(scaled);
+      const newVal = (quantized / (levels - 1)) * 255;
+      const quantError = oldVal - newVal;
+      buffer[idx] = newVal;
+
+      for (const [dx, dy, weight] of coefficients) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+          buffer[ny * width + nx] += quantError * weight;
+        }
+      }
+    }
+  }
+};
+
 export const convertToAscii = (srcData: ImageData, options: AsciiOptions): string | ColorAsciiResult => {
-  const { columns, charset, isInverted, brightness, contrast, dither, colorMode } = options;
+  const { columns, charset, isInverted, brightness, contrast, dither, colorMode, saturation, gamma } = options;
   
   const srcW = srcData.width;
   const srcH = srcData.height;
@@ -136,40 +169,52 @@ export const convertToAscii = (srcData: ImageData, options: AsciiOptions): strin
   let colorBuffer: Uint8ClampedArray | null = null;
   if (colorMode) {
     colorBuffer = resizeImageColor(srcData, width, height);
+    // Apply saturation adjustment to color buffer
+    if (saturation !== undefined && saturation !== 1.0) {
+      for (let i = 0; i < width * height; i++) {
+        const off = i * 3;
+        const r = colorBuffer[off];
+        const g = colorBuffer[off + 1];
+        const b = colorBuffer[off + 2];
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        colorBuffer[off] = Math.max(0, Math.min(255, gray + (r - gray) * saturation));
+        colorBuffer[off + 1] = Math.max(0, Math.min(255, gray + (g - gray) * saturation));
+        colorBuffer[off + 2] = Math.max(0, Math.min(255, gray + (b - gray) * saturation));
+      }
+    }
   }
   
-  // 2. Adjust brightness/contrast
+  // 2. Adjust brightness/contrast/gamma
   const len = charset.length;
   if (len === 0) return colorMode ? { text: '', html: '' } : '';
   
+  const gammaVal = gamma ?? 1.0;
   const finalBuffer = new Float32Array(grayBuffer.length);
   for (let i = 0; i < grayBuffer.length; i++) {
-    finalBuffer[i] = adjustPixel(grayBuffer[i], brightness, contrast, isInverted);
+    finalBuffer[i] = adjustPixel(grayBuffer[i], brightness, contrast, isInverted, gammaVal);
   }
   
   // 3. Dithering
   if (dither === 'floyd') {
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = y * width + x;
-        const oldVal = finalBuffer[idx];
-        const scaled = (oldVal / 255) * (len - 1);
-        const quantized = Math.round(scaled);
-        const newVal = (quantized / (len - 1)) * 255;
-        const quantError = oldVal - newVal;
-        finalBuffer[idx] = newVal;
-        
-        if (x + 1 < width) 
-          finalBuffer[y * width + (x + 1)] += quantError * (7 / 16);
-        if (y + 1 < height) {
-          if (x - 1 >= 0) 
-            finalBuffer[(y + 1) * width + (x - 1)] += quantError * (3 / 16);
-          finalBuffer[(y + 1) * width + x] += quantError * (5 / 16);
-          if (x + 1 < width) 
-            finalBuffer[(y + 1) * width + (x + 1)] += quantError * (1 / 16);
-        }
-      }
-    }
+    applyErrorDiffusion(finalBuffer, width, height, len, [
+      [1, 0, 7/16], [-1, 1, 3/16], [0, 1, 5/16], [1, 1, 1/16]
+    ]);
+  } else if (dither === 'atkinson') {
+    applyErrorDiffusion(finalBuffer, width, height, len, [
+      [1, 0, 1/8], [2, 0, 1/8], [-1, 1, 1/8], [0, 1, 1/8], [1, 1, 1/8], [0, 2, 1/8]
+    ]);
+  } else if (dither === 'stucki') {
+    applyErrorDiffusion(finalBuffer, width, height, len, [
+      [1, 0, 8/42], [2, 0, 4/42],
+      [-2, 1, 2/42], [-1, 1, 4/42], [0, 1, 8/42], [1, 1, 4/42], [2, 1, 2/42],
+      [-2, 2, 1/42], [-1, 2, 2/42], [0, 2, 4/42], [1, 2, 2/42], [2, 2, 1/42]
+    ]);
+  } else if (dither === 'sierra') {
+    applyErrorDiffusion(finalBuffer, width, height, len, [
+      [1, 0, 5/32], [2, 0, 3/32],
+      [-2, 1, 2/32], [-1, 1, 4/32], [0, 1, 5/32], [1, 1, 4/32], [2, 1, 2/32],
+      [-1, 2, 2/32], [0, 2, 3/32], [1, 2, 2/32]
+    ]);
   } else if (dither === 'bayer') {
     const bayer = [
       [ 0, 8, 2, 10], [12, 4, 14, 6],

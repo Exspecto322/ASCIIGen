@@ -8,7 +8,7 @@ const getCharsetString = (name: string) =>
   CHARSETS[name] || (name.length > 0 ? name : CHARSETS['Standard']);
 
 export const useAsciiWorker = () => {
-  const { fileUrl, columns, charset, dither, isInverted, brightness, contrast, colorMode } = useStore(
+  const { fileUrl, columns, charset, dither, isInverted, brightness, contrast, saturation, gamma, colorMode } = useStore(
     useShallow(s => ({
       fileUrl: s.fileUrl,
       columns: s.columns,
@@ -17,6 +17,8 @@ export const useAsciiWorker = () => {
       isInverted: s.isInverted,
       brightness: s.brightness,
       contrast: s.contrast,
+      saturation: s.saturation,
+      gamma: s.gamma,
       colorMode: s.colorMode,
     }))
   );
@@ -75,6 +77,8 @@ export const useAsciiWorker = () => {
           isInverted,
           brightness,
           contrast,
+          saturation,
+          gamma,
           colorMode
         }
       });
@@ -86,5 +90,5 @@ export const useAsciiWorker = () => {
 
     return () => clearTimeout(timer);
     
-  }, [fileUrl, columns, charset, dither, isInverted, brightness, contrast, colorMode, setProcessing]);
+  }, [fileUrl, columns, charset, dither, isInverted, brightness, contrast, saturation, gamma, colorMode, setProcessing]);
 };

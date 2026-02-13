@@ -9,7 +9,7 @@ import type { ColorAsciiResult } from '../../features/ascii/asciiEngine';
 import { getCharset } from '../../features/ascii/charsets';
 
 export const PreviewPanel: React.FC = () => {
-  const { fileUrl, asciiText, colorHtml, isProcessing, mediaType, gifUrl, colorMode, columns, charset, dither, isInverted, brightness, contrast } = useStore(
+  const { fileUrl, asciiText, colorHtml, isProcessing, mediaType, gifUrl, colorMode, columns, charset, dither, isInverted, brightness, contrast, saturation, gamma, fgColor, bgColor } = useStore(
     useShallow(s => ({
       fileUrl: s.fileUrl,
       asciiText: s.asciiText,
@@ -24,6 +24,10 @@ export const PreviewPanel: React.FC = () => {
       isInverted: s.isInverted,
       brightness: s.brightness,
       contrast: s.contrast,
+      saturation: s.saturation,
+      gamma: s.gamma,
+      fgColor: s.fgColor,
+      bgColor: s.bgColor,
     }))
   );
 
@@ -87,6 +91,8 @@ export const PreviewPanel: React.FC = () => {
             isInverted,
             brightness,
             contrast,
+            saturation,
+            gamma,
             colorMode
           });
           
@@ -108,7 +114,7 @@ export const PreviewPanel: React.FC = () => {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [mediaType, columns, charset, dither, isInverted, brightness, contrast, colorMode, setAscii, setColorHtml]);
+  }, [mediaType, columns, charset, dither, isInverted, brightness, contrast, saturation, gamma, colorMode, setAscii, setColorHtml]);
 
   // Paste handler
   useEffect(() => {
@@ -284,8 +290,8 @@ export const PreviewPanel: React.FC = () => {
 
           <div ref={containerRef} className="w-full h-full flex items-center justify-center overflow-auto p-4 cursor-grab active:cursor-grabbing custom-scrollbar">
             <div 
-              className="bg-black origin-center transition-transform duration-150 ease-out"
-              style={{ transform: `scale(${zoom})` }}
+              className="origin-center transition-transform duration-150 ease-out"
+              style={{ transform: `scale(${zoom})`, backgroundColor: colorMode ? '#000000' : bgColor }}
             >
               {colorMode && colorHtml ? (
                 <pre 
@@ -295,8 +301,8 @@ export const PreviewPanel: React.FC = () => {
                 />
               ) : (
                 <pre 
-                  className="font-mono text-[8px] leading-[8px] whitespace-pre text-white/90 select-text"
-                  style={fontStyle}
+                  className="font-mono text-[8px] leading-[8px] whitespace-pre select-text"
+                  style={{ ...fontStyle, color: fgColor }}
                 >
                   {asciiText}
                 </pre>

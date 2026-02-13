@@ -7,7 +7,7 @@ import VideoWorker from '../../workers/video.worker?worker';
 const getCharsetString = (name: string) => CHARSETS[name] || CHARSETS['Standard'];
 
 export const useVideoWorker = () => {
-  const { file, columns, charset, dither, isInverted, brightness, contrast } = useStore(
+  const { file, columns, charset, dither, isInverted, brightness, contrast, saturation, gamma } = useStore(
     useShallow(s => ({
       file: s.file,
       columns: s.columns,
@@ -16,6 +16,8 @@ export const useVideoWorker = () => {
       isInverted: s.isInverted,
       brightness: s.brightness,
       contrast: s.contrast,
+      saturation: s.saturation,
+      gamma: s.gamma,
     }))
   );
 
@@ -70,11 +72,13 @@ export const useVideoWorker = () => {
           dither,
           isInverted,
           brightness,
-          contrast
+          contrast,
+          saturation,
+          gamma
         }
       }
     });
-  }, [file, columns, charset, dither, isInverted, brightness, contrast, setProcessing, setVideoProgress]);
+  }, [file, columns, charset, dither, isInverted, brightness, contrast, saturation, gamma, setProcessing, setVideoProgress]);
 
   return { convertVideo };
 };

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../../state/store';
 import { useShallow } from 'zustand/react/shallow';
 import type { Preset } from '../../state/store';
-import { copyToClipboard, downloadTxt, downloadPng } from '../../features/ascii/exportUtils';
+import { copyToClipboard, downloadTxt, downloadPng, downloadColorPng } from '../../features/ascii/exportUtils';
 import { useVideoWorker } from '../../features/video/useVideoWorker';
 import { Copy, FileText, Image as ImageIcon, Check, Film, Loader2, Save, Trash2 } from 'lucide-react';
 
@@ -55,9 +55,13 @@ const PresetChip = ({
 );
 
 export const PresetsPanel: React.FC = () => {
-  const { asciiText, mediaType, isProcessing, videoProgress, gifUrl, presets } = useStore(
+  const { asciiText, colorHtml, colorMode, fgColor, bgColor, mediaType, isProcessing, videoProgress, gifUrl, presets } = useStore(
     useShallow(s => ({
       asciiText: s.asciiText,
+      colorHtml: s.colorHtml,
+      colorMode: s.colorMode,
+      fgColor: s.fgColor,
+      bgColor: s.bgColor,
       mediaType: s.mediaType,
       isProcessing: s.isProcessing,
       videoProgress: s.videoProgress,
@@ -75,7 +79,11 @@ export const PresetsPanel: React.FC = () => {
       isInverted: s.isInverted,
       brightness: s.brightness,
       contrast: s.contrast,
+      saturation: s.saturation,
+      gamma: s.gamma,
       colorMode: s.colorMode,
+      fgColor: s.fgColor,
+      bgColor: s.bgColor,
     }))
   );
 
@@ -110,7 +118,11 @@ export const PresetsPanel: React.FC = () => {
 
   const handleDownloadPng = () => {
     if (!asciiText) return;
-    downloadPng(asciiText, `asciigen-${Date.now()}.png`);
+    if (colorMode && colorHtml) {
+      downloadColorPng(colorHtml, bgColor, `asciigen-${Date.now()}.png`);
+    } else {
+      downloadPng(asciiText, fgColor, bgColor, `asciigen-${Date.now()}.png`);
+    }
   };
 
   const handleExportGif = () => {

@@ -20,7 +20,15 @@ export const downloadTxt = (text: string, filename = 'ascii-art.txt') => {
   URL.revokeObjectURL(url);
 };
 
-export const generatePngBlob = (text: string, font = '12px monospace'): Promise<Blob | null> => {
+/**
+ * Render monochrome ASCII text to a canvas PNG with custom fg/bg colors.
+ */
+export const generatePngBlob = (
+  text: string,
+  fgColor = '#ffffff',
+  bgColor = '#000000',
+  font = '12px monospace'
+): Promise<Blob | null> => {
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -29,46 +37,29 @@ export const generatePngBlob = (text: string, font = '12px monospace'): Promise<
       return;
     }
 
-    const lines = text.split('\n');
-    
-    // Measure char width
+    const lines = text.split('\n').filter(l => l.length > 0);
+    if (lines.length === 0) { resolve(null); return; }
+
     ctx.font = font;
     const metrics = ctx.measureText('M');
     const charWidth = metrics.width;
+    const lh = parseFloat(font) * 0.6;
 
-    // const lineHeight = parseFloat(font) * lineHeightRatio; 
-    // Wait, lineHeightRatio passed is heuristic. 
-    // If font is 10px, line-height 6px is very tight (0.6).
-    // Let's use simpler logic: 
-    // Standard terminal line height is usually slightly more than font size if we want readability,
-    // BUT for ASCII art to look like image, line height should be ~0.5-0.6 of width.
-    // charWidth is width of 1 char. Line height should be charWidth * 2 (approx) if chars are 1:2.
-    // Actually most fonts are.
-    // Let's stick to simple passed ratio or fixed value.
-    // The PreviewPanel uses line-height: 0.6em.
-    
-    // We'll use 12px font.
-    // Line height = 12 * 0.6 = 7.2px.
-    // Char width approx 7.2px for monospace? No, usually ~0.6 of size. 12 * 0.6 = 7.2.
-    // So roughly square grid.
-    
-    // Canvas dimensions
-    const width = lines[0].length * charWidth; // Assuming rectangular
-    const height = lines.length * (parseFloat(font) * 0.6); // Match ratio
+    const width = lines[0].length * charWidth;
+    const height = lines.length * lh;
 
-    canvas.width = Math.ceil(width + 20); // Padding
+    canvas.width = Math.ceil(width + 20);
     canvas.height = Math.ceil(height + 20);
 
-    // Draw
-    ctx.fillStyle = '#000000';
+    // Background
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.fillStyle = '#ffffff';
+
+    // Text
+    ctx.fillStyle = fgColor;
     ctx.font = font;
     ctx.textBaseline = 'top';
-    
-    const lh = parseFloat(font) * 0.6;
-    
+
     lines.forEach((line, i) => {
       ctx.fillText(line, 10, 10 + i * lh);
     });
@@ -79,16 +70,100 @@ export const generatePngBlob = (text: string, font = '12px monospace'): Promise<
   });
 };
 
-export const downloadPng = async (text: string, filename = 'ascii-art.png') => {
-  const blob = await generatePngBlob(text);
-  if (blob) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
+/**
+ * Render COLOR ASCII art to a canvas PNG by parsing the colorHtml spans.
+ * Each <span style="color:rgb(r,g,b)">chars</span> is drawn with its color.
+ */
+export const generateColorPngBlob = (
+  colorHtml: string,
+  bgColor = '#000000',
+  font = '12px monospace'
+): Promise<Blob | null> => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { resolve(null); return; }
+
+    // Parse HTML lines
+    const htmlLines = colorHtml.split('\n').filter(l => l.length > 0);
+    if (htmlLines.length === 0) { resolve(null); return; }
+
+    ctx.font = font;
+    const charWidth = ctx.measureText('M').width;
+    const lh = parseFloat(font) * 0.6;
+
+    // Estimate width from first line char count
+    const firstLineChars = htmlLines[0].replace(/<[^>]*>/g, '').length;
+    const width = firstLineChars * charWidth;
+    const height = htmlLines.length * lh;
+
+    canvas.width = Math.ceil(width + 20);
+    canvas.height = Math.ceil(height + 20);
+
+    // Background
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = font;
+    ctx.textBaseline = 'top';
+
+    // Parse and render each line
+    const spanRegex = /<span style="color:rgb\((\d+),(\d+),(\d+)\)">(.*?)<\/span>/g;
+
+    htmlLines.forEach((line, lineIndex) => {
+      let xPos = 10;
+      const yPos = 10 + lineIndex * lh;
+      let match;
+      spanRegex.lastIndex = 0;
+
+      while ((match = spanRegex.exec(line)) !== null) {
+        const r = match[1];
+        const g = match[2];
+        const b = match[3];
+        const chars = match[4]
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&');
+
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        for (const ch of chars) {
+          ctx.fillText(ch, xPos, yPos);
+          xPos += charWidth;
+        }
+      }
+    });
+
+    canvas.toBlob((blob) => {
+      resolve(blob);
+    }, 'image/png');
+  });
+};
+
+const saveBlobAs = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+export const downloadPng = async (
+  text: string,
+  fgColor = '#ffffff',
+  bgColor = '#000000',
+  filename = 'ascii-art.png'
+) => {
+  const blob = await generatePngBlob(text, fgColor, bgColor);
+  if (blob) saveBlobAs(blob, filename);
+};
+
+export const downloadColorPng = async (
+  colorHtml: string,
+  bgColor = '#000000',
+  filename = 'ascii-art-color.png'
+) => {
+  const blob = await generateColorPngBlob(colorHtml, bgColor);
+  if (blob) saveBlobAs(blob, filename);
 };
