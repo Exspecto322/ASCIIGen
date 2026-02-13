@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../../state/store';
+import { useShallow } from 'zustand/react/shallow';
 import { CHARSETS } from './charsets';
 import AsciiWorker from '../../workers/ascii.worker?worker';
 
@@ -7,19 +8,22 @@ const getCharsetString = (name: string) =>
   CHARSETS[name] || (name.length > 0 ? name : CHARSETS['Standard']);
 
 export const useAsciiWorker = () => {
-  const { 
-    fileUrl, 
-    columns, 
-    charset, 
-    dither, 
-    isInverted, 
-    brightness, 
-    contrast,
-    colorMode,
-    setAscii,
-    setColorHtml,
-    setProcessing
-  } = useStore();
+  const { fileUrl, columns, charset, dither, isInverted, brightness, contrast, colorMode } = useStore(
+    useShallow(s => ({
+      fileUrl: s.fileUrl,
+      columns: s.columns,
+      charset: s.charset,
+      dither: s.dither,
+      isInverted: s.isInverted,
+      brightness: s.brightness,
+      contrast: s.contrast,
+      colorMode: s.colorMode,
+    }))
+  );
+
+  const setAscii = useStore(s => s.setAscii);
+  const setColorHtml = useStore(s => s.setColorHtml);
+  const setProcessing = useStore(s => s.setProcessing);
 
   const workerRef = useRef<Worker | null>(null);
 

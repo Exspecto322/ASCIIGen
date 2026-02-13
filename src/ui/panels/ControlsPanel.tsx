@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../state/store';
+import { useShallow } from 'zustand/react/shallow';
 import { CHARSETS, sortCharsByDensity } from '../../features/ascii/charsets';
 import { Sliders, Type, Grid, Sun, Moon, Droplet, ChevronDown, ChevronRight, ArrowUpDown, RotateCcw, Palette } from 'lucide-react';
 
@@ -35,10 +36,19 @@ const ControlSection = ({ title, icon: Icon, children, defaultOpen = true }: Con
 };
 
 export const ControlsPanel: React.FC = () => {
-  const { 
-    columns, charset, dither, isInverted, brightness, contrast, colorMode,
-    updateSettings 
-  } = useStore();
+  const { columns, charset, dither, isInverted, brightness, contrast, colorMode } = useStore(
+    useShallow(s => ({
+      columns: s.columns,
+      charset: s.charset,
+      dither: s.dither,
+      isInverted: s.isInverted,
+      brightness: s.brightness,
+      contrast: s.contrast,
+      colorMode: s.colorMode,
+    }))
+  );
+
+  const updateSettings = useStore(s => s.updateSettings);
 
   const handlePresetChange = (name: string) => {
     if (CHARSETS[name]) {
@@ -54,7 +64,6 @@ export const ControlsPanel: React.FC = () => {
   return (
     <aside className="bg-neutral-950/80 p-3 flex flex-col gap-3 overflow-y-auto h-full backdrop-blur-md w-full custom-scrollbar">
       
-      {/* Resolution */}
       <ControlSection title="Geometry" icon={Grid}>
         <div className="space-y-3 pt-3">
           <div className="flex justify-between text-xs text-neutral-500">
@@ -76,10 +85,8 @@ export const ControlsPanel: React.FC = () => {
         </div>
       </ControlSection>
 
-      {/* Characters */}
       <ControlSection title="Typography" icon={Type}>
         <div className="space-y-3 pt-3">
-           {/* Preset Selector */}
            <div className="flex flex-wrap gap-1.5">
              {Object.keys(CHARSETS).map(name => (
                 <button
@@ -92,7 +99,6 @@ export const ControlsPanel: React.FC = () => {
              ))}
            </div>
            
-           {/* Custom Input */}
            <div className="space-y-1.5">
              <div className="flex justify-between text-xs text-neutral-500">
                <span>Active Set</span>
@@ -122,7 +128,6 @@ export const ControlsPanel: React.FC = () => {
         </div>
       </ControlSection>
 
-      {/* Color Mode */}
       <ControlSection title="Color" icon={Palette}>
         <div className="space-y-3 pt-3">
           <label className="flex items-center justify-between text-xs text-neutral-400 cursor-pointer select-none py-1">
@@ -148,10 +153,8 @@ export const ControlsPanel: React.FC = () => {
         </div>
       </ControlSection>
 
-      {/* Processing */}
       <ControlSection title="Processing" icon={Sliders}>
         <div className="space-y-4 pt-3">
-          {/* Brightness */}
           <div className="space-y-2">
             <div className="flex justify-between text-xs text-neutral-500">
               <span className="flex items-center gap-1.5"><Sun className="w-3 h-3"/> Brightness</span>
@@ -178,7 +181,6 @@ export const ControlsPanel: React.FC = () => {
             </div>
           </div>
 
-          {/* Contrast */}
           <div className="space-y-2">
             <div className="flex justify-between text-xs text-neutral-500">
               <span className="flex items-center gap-1.5"><Moon className="w-3 h-3"/> Contrast</span>
@@ -205,7 +207,6 @@ export const ControlsPanel: React.FC = () => {
             </div>
           </div>
           
-          {/* Dither */}
           <div className="space-y-2 pt-2 border-t border-white/5">
             <div className="flex items-center gap-1.5 text-xs text-neutral-500">
               <Droplet className="w-3 h-3"/> Dithering

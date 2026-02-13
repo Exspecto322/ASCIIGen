@@ -1,26 +1,32 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../../state/store';
+import { useShallow } from 'zustand/react/shallow';
+import { CHARSETS } from '../ascii/charsets';
 import VideoWorker from '../../workers/video.worker?worker';
 
+const getCharsetString = (name: string) => CHARSETS[name] || CHARSETS['Standard'];
+
 export const useVideoWorker = () => {
-  const { 
-    file, 
-    columns, 
-    charset, 
-    dither, 
-    isInverted, 
-    brightness, 
-    contrast,
-    setProcessing,
-    setVideoProgress,
-  } = useStore();
+  const { file, columns, charset, dither, isInverted, brightness, contrast } = useStore(
+    useShallow(s => ({
+      file: s.file,
+      columns: s.columns,
+      charset: s.charset,
+      dither: s.dither,
+      isInverted: s.isInverted,
+      brightness: s.brightness,
+      contrast: s.contrast,
+    }))
+  );
+
+  const setProcessing = useStore(s => s.setProcessing);
+  const setVideoProgress = useStore(s => s.setVideoProgress);
 
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
     workerRef.current = new VideoWorker();
     
-    // Init ffmpeg
     workerRef.current.postMessage({ type: 'init' });
 
     workerRef.current.onmessage = (e) => {
@@ -35,16 +41,10 @@ export const useVideoWorker = () => {
       } else if (type === 'done') {
         setProcessing(false);
         setVideoProgress(100);
-        // Save gifUrl in store
-        // We added gifUrl to state, but not a specific setter. 
-        // We can use updateSettings type hack or add it properly.
-        // Let's assume useStore was updated with 'setGifUrl' or I can patch it.
-        // I'll use a local hack for now:
         useStore.setState({ gifUrl });
       } else if (type === 'error') {
         console.error('Video Worker Error:', error);
         setProcessing(false);
-        alert('Video processing failed: ' + error);
       }
     };
 
@@ -58,7 +58,7 @@ export const useVideoWorker = () => {
     
     setProcessing(true);
     setVideoProgress(0);
-    useStore.setState({ gifUrl: null }); // Clear previous
+    useStore.setState({ gifUrl: null });
     
     workerRef.current.postMessage({
       type: 'process',
@@ -66,13 +66,6 @@ export const useVideoWorker = () => {
         file,
         options: {
           columns,
-          // asciiEngine helper takes options with 'charset' string.
-          // Wait, 'asciiEngine.ts' received 'charset' string.
-          // In `useAsciiWorker`, I looked up the string. 
-          // Here I need to do the same.
-          // I need to import getCharset logic.
-          // But charset is just a string in store.
-          // I should import CHARSETS helper here.
           charset: getCharsetString(charset),
           dither,
           isInverted,
@@ -85,7 +78,3 @@ export const useVideoWorker = () => {
 
   return { convertVideo };
 };
-
-// Helper
-import { CHARSETS } from '../ascii/charsets';
-const getCharsetString = (name: string) => CHARSETS[name] || CHARSETS['Standard'];

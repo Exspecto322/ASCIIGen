@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../../state/store';
+import { useShallow } from 'zustand/react/shallow';
 import type { Preset } from '../../state/store';
 import { copyToClipboard, downloadTxt, downloadPng } from '../../features/ascii/exportUtils';
 import { useVideoWorker } from '../../features/video/useVideoWorker';
@@ -54,21 +55,43 @@ const PresetChip = ({
 );
 
 export const PresetsPanel: React.FC = () => {
-  const { asciiText, mediaType, isProcessing, videoProgress, gifUrl, presets, savePreset, loadPreset, deletePreset } = useStore();
+  const { asciiText, mediaType, isProcessing, videoProgress, gifUrl, presets } = useStore(
+    useShallow(s => ({
+      asciiText: s.asciiText,
+      mediaType: s.mediaType,
+      isProcessing: s.isProcessing,
+      videoProgress: s.videoProgress,
+      gifUrl: s.gifUrl,
+      presets: s.presets,
+    }))
+  );
+
+  const currentSettings = useStore(
+    useShallow(s => ({
+      columns: s.columns,
+      charset: s.charset,
+      mode: s.mode,
+      dither: s.dither,
+      isInverted: s.isInverted,
+      brightness: s.brightness,
+      contrast: s.contrast,
+      colorMode: s.colorMode,
+    }))
+  );
+
+  const savePreset = useStore(s => s.savePreset);
+  const loadPreset = useStore(s => s.loadPreset);
+  const deletePreset = useStore(s => s.deletePreset);
+
   const [copied, setCopied] = useState(false);
   const [presetName, setPresetName] = useState('');
   const [showSaveInput, setShowSaveInput] = useState(false);
   const { convertVideo } = useVideoWorker();
 
-  // Get current settings for active comparison
-  const currentSettings = useStore(s => ({
-    columns: s.columns, charset: s.charset, mode: s.mode, 
-    dither: s.dither, isInverted: s.isInverted, 
-    brightness: s.brightness, contrast: s.contrast, colorMode: s.colorMode
-  }));
+  const currentSettingsJson = useMemo(() => JSON.stringify(currentSettings), [currentSettings]);
 
   const isPresetActive = (preset: Preset) => {
-    return JSON.stringify(preset.settings) === JSON.stringify(currentSettings);
+    return JSON.stringify(preset.settings) === currentSettingsJson;
   };
 
   const handleCopy = async () => {
@@ -116,7 +139,6 @@ export const PresetsPanel: React.FC = () => {
   return (
     <aside className="bg-neutral-950/80 p-4 flex flex-col gap-6 overflow-y-auto backdrop-blur-md h-full w-full custom-scrollbar">
       
-      {/* Export Section */}
       <div className="space-y-3">
         <h3 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.15em]">Export</h3>
         
@@ -145,7 +167,6 @@ export const PresetsPanel: React.FC = () => {
             label="Save as .PNG"
           />
 
-          {/* Video Export */}
           {(mediaType === 'video' || mediaType === 'gif') && (
             <div className="pt-3 border-t border-white/5">
                {!gifUrl ? (
@@ -180,7 +201,6 @@ export const PresetsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Presets Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.15em]">Presets</h3>
@@ -193,7 +213,6 @@ export const PresetsPanel: React.FC = () => {
           </button>
         </div>
 
-        {/* Save Input */}
         {showSaveInput && (
           <div className="flex gap-2">
             <input 
@@ -215,7 +234,6 @@ export const PresetsPanel: React.FC = () => {
           </div>
         )}
         
-        {/* Preset Chips */}
         <div className="flex flex-wrap gap-1.5">
           {presets.map(preset => (
             <PresetChip
@@ -229,7 +247,6 @@ export const PresetsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Info */}
       <div className="mt-auto pt-4 border-t border-white/5">
         <div className="text-[10px] text-neutral-700 space-y-1 leading-relaxed">
           <p>ASCII art generated client-side.</p>

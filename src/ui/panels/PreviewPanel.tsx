@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useStore } from '../../state/store';
+import { useShallow } from 'zustand/react/shallow';
 import { useAsciiWorker } from '../../features/ascii/useAsciiWorker';
 import { Upload, Play, Pause, ZoomIn, ZoomOut, Maximize2, X } from 'lucide-react';
 import { convertToAscii } from '../../features/ascii/asciiEngine';
@@ -8,12 +9,27 @@ import type { ColorAsciiResult } from '../../features/ascii/asciiEngine';
 import { getCharset } from '../../features/ascii/charsets';
 
 export const PreviewPanel: React.FC = () => {
-  const { 
-    fileUrl, asciiText, colorHtml, setFile, isProcessing, 
-    mediaType, gifUrl, colorMode,
-    columns, charset, dither, isInverted, brightness, contrast,
-    setAscii, setColorHtml
-  } = useStore();
+  const { fileUrl, asciiText, colorHtml, isProcessing, mediaType, gifUrl, colorMode, columns, charset, dither, isInverted, brightness, contrast } = useStore(
+    useShallow(s => ({
+      fileUrl: s.fileUrl,
+      asciiText: s.asciiText,
+      colorHtml: s.colorHtml,
+      isProcessing: s.isProcessing,
+      mediaType: s.mediaType,
+      gifUrl: s.gifUrl,
+      colorMode: s.colorMode,
+      columns: s.columns,
+      charset: s.charset,
+      dither: s.dither,
+      isInverted: s.isInverted,
+      brightness: s.brightness,
+      contrast: s.contrast,
+    }))
+  );
+
+  const setFile = useStore(s => s.setFile);
+  const setAscii = useStore(s => s.setAscii);
+  const setColorHtml = useStore(s => s.setColorHtml);
   
   useAsciiWorker();
 
@@ -175,7 +191,6 @@ export const PreviewPanel: React.FC = () => {
   return (
     <section className="flex flex-col relative bg-neutral-950 overflow-hidden h-full">
       {!fileUrl ? (
-        /* Dropzone */
         <div 
           {...getRootProps()} 
           className={`flex-1 flex items-center justify-center p-6 m-4 rounded-2xl transition-all duration-300 cursor-pointer group
@@ -202,7 +217,6 @@ export const PreviewPanel: React.FC = () => {
       ) : (
         <div className="flex-1 overflow-hidden bg-neutral-950 flex flex-col items-center justify-center relative">
           
-          {/* Toolbar */}
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center bg-black/70 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl">
             <button 
               onClick={() => setFile(null)} 
@@ -241,7 +255,6 @@ export const PreviewPanel: React.FC = () => {
             </button>
           </div>
 
-          {/* Hidden Video Element */}
           {(mediaType === 'video' || mediaType === 'gif') && (
             <>
               <video 
@@ -255,7 +268,6 @@ export const PreviewPanel: React.FC = () => {
               />
               <canvas ref={canvasRef} className="hidden" />
               
-              {/* Video Controls */}
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/70 px-4 py-2 rounded-full backdrop-blur-xl z-20 border border-white/10">
                 <button 
                   onClick={toggleVideoPlayback}
@@ -270,7 +282,6 @@ export const PreviewPanel: React.FC = () => {
             </>
           )}
 
-          {/* ASCII Output */}
           <div ref={containerRef} className="w-full h-full flex items-center justify-center overflow-auto p-4 cursor-grab active:cursor-grabbing custom-scrollbar">
             <div 
               className="bg-black origin-center transition-transform duration-150 ease-out"
@@ -293,7 +304,6 @@ export const PreviewPanel: React.FC = () => {
             </div>
           </div>
               
-          {/* Loading overlay */}
           {isProcessing && mediaType === 'image' && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm z-40">
               <div className="flex flex-col items-center gap-3">
