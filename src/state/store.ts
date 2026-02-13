@@ -6,7 +6,7 @@ export type MediaType = 'image' | 'video' | 'gif';
 export interface Settings {
   columns: number;
   charset: string;
-  mode: 'standard' | 'edge';
+  mode: 'standard' | 'sobel' | 'prewitt' | 'laplacian' | 'canny';
   dither: 'none' | 'bayer' | 'floyd' | 'atkinson' | 'stucki' | 'sierra';
   isInverted: boolean;
   brightness: number;
@@ -22,6 +22,20 @@ export interface Preset {
   name: string;
   settings: Settings;
   builtIn?: boolean;
+}
+
+export interface PostProcessing {
+  scanlines: boolean;
+  scanlinesOpacity: number;
+  scanlinesSpacing: number;
+  vignette: boolean;
+  vignetteIntensity: number;
+  crtCurve: boolean;
+  crtAmount: number;
+  bloom: boolean;
+  bloomIntensity: number;
+  grain: boolean;
+  grainIntensity: number;
 }
 
 export interface AppState extends Settings {
@@ -42,12 +56,16 @@ export interface AppState extends Settings {
   isPlaying: boolean;
   frameRate: number;
 
+  // Post-processing (visual only, not in presets)
+  postProcessing: PostProcessing;
+
   // Presets
   presets: Preset[];
 
   // Actions
   setFile: (file: File | null) => void;
   updateSettings: (settings: Partial<Settings>) => void;
+  updatePostProcessing: (pp: Partial<PostProcessing>) => void;
   setAscii: (text: string) => void;
   setColorHtml: (html: string) => void;
   setProcessing: (isProcessing: boolean) => void;
@@ -119,6 +137,20 @@ export const useStore = create<AppState>((set, get) => ({
 
   presets: loadPresets(),
 
+  postProcessing: {
+    scanlines: false,
+    scanlinesOpacity: 0.15,
+    scanlinesSpacing: 3,
+    vignette: false,
+    vignetteIntensity: 0.6,
+    crtCurve: false,
+    crtAmount: 0.03,
+    bloom: false,
+    bloomIntensity: 0.4,
+    grain: false,
+    grainIntensity: 0.15,
+  },
+
   setFile: (file) => {
     if (!file) {
       set({ 
@@ -141,6 +173,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   updateSettings: (settings) => set((state) => ({ ...state, ...settings })),
+  
+  updatePostProcessing: (pp) => set((state) => ({
+    postProcessing: { ...state.postProcessing, ...pp }
+  })),
   
   setAscii: (text) => set({ asciiText: text }),
   setColorHtml: (html) => set({ colorHtml: html }),

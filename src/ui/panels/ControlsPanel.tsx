@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../state/store';
 import { useShallow } from 'zustand/react/shallow';
 import { CHARSETS, sortCharsByDensity } from '../../features/ascii/charsets';
-import { Sliders, Type, Grid, Sun, Moon, Droplet, ChevronDown, ChevronRight, ArrowUpDown, RotateCcw, Palette, Contrast, Gauge } from 'lucide-react';
+import { Sliders, Type, Grid, Sun, Moon, Droplet, ChevronDown, ChevronRight, ArrowUpDown, RotateCcw, Palette, Contrast, Gauge, Sparkles, Monitor, Scan, CircleDot, Aperture } from 'lucide-react';
 
 interface ControlSectionProps {
   title: string;
@@ -36,10 +36,11 @@ const ControlSection = ({ title, icon: Icon, children, defaultOpen = true }: Con
 };
 
 export const ControlsPanel: React.FC = () => {
-  const { columns, charset, dither, isInverted, brightness, contrast, saturation, gamma, colorMode, fgColor, bgColor } = useStore(
+  const { columns, charset, mode, dither, isInverted, brightness, contrast, saturation, gamma, colorMode, fgColor, bgColor } = useStore(
     useShallow(s => ({
       columns: s.columns,
       charset: s.charset,
+      mode: s.mode,
       dither: s.dither,
       isInverted: s.isInverted,
       brightness: s.brightness,
@@ -86,6 +87,29 @@ export const ControlsPanel: React.FC = () => {
           {columns > 500 && (
             <p className="text-[10px] text-amber-500/70">⚡ High resolution — may be CPU intensive</p>
           )}
+        </div>
+      </ControlSection>
+
+      <ControlSection title="Edge Detection" icon={Contrast} defaultOpen={false}>
+        <div className="space-y-3 pt-3">
+          <div className="flex flex-wrap gap-1.5">
+            {(['standard', 'sobel', 'prewitt', 'laplacian', 'canny'] as const).map(m => (
+              <button
+                key={m}
+                onClick={() => updateSettings({ mode: m })}
+                className={`text-[10px] px-2.5 py-1 rounded-full border transition-all font-medium capitalize ${mode === m ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' : 'bg-white/[0.03] text-neutral-500 border-transparent hover:border-white/10 hover:text-neutral-300'}`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-neutral-600 leading-relaxed">
+            {mode === 'standard' && "No edge detection — standard brightness mapping"}
+            {mode === 'sobel' && "Sobel — strong edges, directional gradients"}
+            {mode === 'prewitt' && "Prewitt — uniform weighting, smoother edges"}
+            {mode === 'laplacian' && "Laplacian — second-derivative, fine detail"}
+            {mode === 'canny' && "Canny — thin edges with non-max suppression"}
+          </p>
         </div>
       </ControlSection>
 
@@ -321,6 +345,129 @@ export const ControlsPanel: React.FC = () => {
         </div>
       </ControlSection>
 
+      <EffectsSection />
+
     </aside>
+  );
+};
+
+/* ====== Effects Section (uses separate postProcessing state) ====== */
+const EffectToggle = ({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) => (
+  <label className="flex items-center justify-between text-xs text-neutral-400 cursor-pointer select-none py-0.5">
+    <span>{label}</span>
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      className="toggle-switch"
+    />
+  </label>
+);
+
+const EffectsSection: React.FC = () => {
+  const pp = useStore(
+    useShallow(s => s.postProcessing)
+  );
+  const updatePP = useStore(s => s.updatePostProcessing);
+
+  return (
+    <ControlSection title="Effects" icon={Sparkles} defaultOpen={false}>
+      <div className="space-y-4 pt-3">
+
+        {/* Scanlines */}
+        <div className="space-y-2">
+          <EffectToggle label="Scanlines" checked={pp.scanlines} onChange={v => updatePP({ scanlines: v })} />
+          {pp.scanlines && (
+            <div className="space-y-2 pl-1">
+              <div className="flex justify-between text-[10px] text-neutral-500">
+                <span className="flex items-center gap-1"><Scan className="w-3 h-3"/> Opacity</span>
+                <span className="font-mono text-neutral-400">{pp.scanlinesOpacity.toFixed(2)}</span>
+              </div>
+              <div className="accent-amber">
+                <input type="range" min="0.02" max="0.5" step="0.02" value={pp.scanlinesOpacity}
+                  onChange={e => updatePP({ scanlinesOpacity: parseFloat(e.target.value) })} className="w-full" />
+              </div>
+              <div className="flex justify-between text-[10px] text-neutral-500">
+                <span>Spacing</span>
+                <span className="font-mono text-neutral-400">{pp.scanlinesSpacing}px</span>
+              </div>
+              <div className="accent-amber">
+                <input type="range" min="1" max="8" step="1" value={pp.scanlinesSpacing}
+                  onChange={e => updatePP({ scanlinesSpacing: parseInt(e.target.value) })} className="w-full" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Vignette */}
+        <div className="space-y-2 pt-2 border-t border-white/5">
+          <EffectToggle label="Vignette" checked={pp.vignette} onChange={v => updatePP({ vignette: v })} />
+          {pp.vignette && (
+            <div className="pl-1">
+              <div className="flex justify-between text-[10px] text-neutral-500">
+                <span className="flex items-center gap-1"><CircleDot className="w-3 h-3"/> Intensity</span>
+                <span className="font-mono text-neutral-400">{pp.vignetteIntensity.toFixed(1)}</span>
+              </div>
+              <div className="accent-amber">
+                <input type="range" min="0.1" max="1.0" step="0.1" value={pp.vignetteIntensity}
+                  onChange={e => updatePP({ vignetteIntensity: parseFloat(e.target.value) })} className="w-full" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* CRT Curve */}
+        <div className="space-y-2 pt-2 border-t border-white/5">
+          <EffectToggle label="CRT Curve" checked={pp.crtCurve} onChange={v => updatePP({ crtCurve: v })} />
+          {pp.crtCurve && (
+            <div className="pl-1">
+              <div className="flex justify-between text-[10px] text-neutral-500">
+                <span className="flex items-center gap-1"><Monitor className="w-3 h-3"/> Curvature</span>
+                <span className="font-mono text-neutral-400">{pp.crtAmount.toFixed(2)}</span>
+              </div>
+              <div className="accent-amber">
+                <input type="range" min="0.01" max="0.1" step="0.005" value={pp.crtAmount}
+                  onChange={e => updatePP({ crtAmount: parseFloat(e.target.value) })} className="w-full" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bloom */}
+        <div className="space-y-2 pt-2 border-t border-white/5">
+          <EffectToggle label="Bloom / Glow" checked={pp.bloom} onChange={v => updatePP({ bloom: v })} />
+          {pp.bloom && (
+            <div className="pl-1">
+              <div className="flex justify-between text-[10px] text-neutral-500">
+                <span className="flex items-center gap-1"><Aperture className="w-3 h-3"/> Intensity</span>
+                <span className="font-mono text-neutral-400">{pp.bloomIntensity.toFixed(1)}</span>
+              </div>
+              <div className="accent-amber">
+                <input type="range" min="0.1" max="2.0" step="0.1" value={pp.bloomIntensity}
+                  onChange={e => updatePP({ bloomIntensity: parseFloat(e.target.value) })} className="w-full" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Grain */}
+        <div className="space-y-2 pt-2 border-t border-white/5">
+          <EffectToggle label="Film Grain" checked={pp.grain} onChange={v => updatePP({ grain: v })} />
+          {pp.grain && (
+            <div className="pl-1">
+              <div className="flex justify-between text-[10px] text-neutral-500">
+                <span>Intensity</span>
+                <span className="font-mono text-neutral-400">{pp.grainIntensity.toFixed(2)}</span>
+              </div>
+              <div className="accent-amber">
+                <input type="range" min="0.02" max="0.5" step="0.02" value={pp.grainIntensity}
+                  onChange={e => updatePP({ grainIntensity: parseFloat(e.target.value) })} className="w-full" />
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
+    </ControlSection>
   );
 };

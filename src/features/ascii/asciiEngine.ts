@@ -1,6 +1,7 @@
 export interface AsciiOptions {
   columns: number;
   charset: string;
+  mode: 'standard' | 'sobel' | 'prewitt' | 'laplacian' | 'canny';
   dither: 'none' | 'bayer' | 'floyd' | 'atkinson' | 'stucki' | 'sierra';
   isInverted: boolean;
   brightness: number;
@@ -125,6 +126,84 @@ export const sobelEdge = (buffer: Float32Array, width: number, height: number): 
   return out;
 };
 
+/** Prewitt edge detection */
+export const prewittEdge = (buffer: Float32Array, width: number, height: number): Float32Array => {
+  const out = new Float32Array(buffer.length);
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const tl = buffer[(y-1)*width+(x-1)], tc = buffer[(y-1)*width+x], tr = buffer[(y-1)*width+(x+1)];
+      const ml = buffer[y*width+(x-1)], mr = buffer[y*width+(x+1)];
+      const bl = buffer[(y+1)*width+(x-1)], bc = buffer[(y+1)*width+x], br = buffer[(y+1)*width+(x+1)];
+      const gx = -tl + tr - ml + mr - bl + br;
+      const gy = -tl - tc - tr + bl + bc + br;
+      out[y*width+x] = Math.min(255, Math.sqrt(gx*gx + gy*gy));
+    }
+  }
+  return out;
+};
+
+/** Laplacian edge detection */
+export const laplacianEdge = (buffer: Float32Array, width: number, height: number): Float32Array => {
+  const out = new Float32Array(buffer.length);
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const tc = buffer[(y-1)*width+x];
+      const ml = buffer[y*width+(x-1)], mc = buffer[y*width+x], mr = buffer[y*width+(x+1)];
+      const bc = buffer[(y+1)*width+x];
+      const val = -tc - ml + 4*mc - mr - bc;
+      out[y*width+x] = Math.min(255, Math.abs(val));
+    }
+  }
+  return out;
+};
+
+/** Canny-style edge detection (simplified: Sobel + non-maximum suppression) */
+export const cannyEdge = (buffer: Float32Array, width: number, height: number): Float32Array => {
+  const magnitude = new Float32Array(buffer.length);
+  const direction = new Float32Array(buffer.length);
+  
+  // Sobel pass for magnitude + direction
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const tl = buffer[(y-1)*width+(x-1)], tc = buffer[(y-1)*width+x], tr = buffer[(y-1)*width+(x+1)];
+      const ml = buffer[y*width+(x-1)], mr = buffer[y*width+(x+1)];
+      const bl = buffer[(y+1)*width+(x-1)], bc = buffer[(y+1)*width+x], br = buffer[(y+1)*width+(x+1)];
+      const gx = -tl + tr - 2*ml + 2*mr - bl + br;
+      const gy = -tl - 2*tc - tr + bl + 2*bc + br;
+      magnitude[y*width+x] = Math.sqrt(gx*gx + gy*gy);
+      direction[y*width+x] = Math.atan2(gy, gx);
+    }
+  }
+  
+  // Non-maximum suppression
+  const out = new Float32Array(buffer.length);
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const idx = y*width+x;
+      const angle = direction[idx] * 180 / Math.PI;
+      const mag = magnitude[idx];
+      let n1 = 0, n2 = 0;
+      
+      if ((angle >= -22.5 && angle < 22.5) || angle >= 157.5 || angle < -157.5) {
+        n1 = magnitude[y*width+(x-1)];
+        n2 = magnitude[y*width+(x+1)];
+      } else if ((angle >= 22.5 && angle < 67.5) || (angle >= -157.5 && angle < -112.5)) {
+        n1 = magnitude[(y-1)*width+(x+1)];
+        n2 = magnitude[(y+1)*width+(x-1)];
+      } else if ((angle >= 67.5 && angle < 112.5) || (angle >= -112.5 && angle < -67.5)) {
+        n1 = magnitude[(y-1)*width+x];
+        n2 = magnitude[(y+1)*width+x];
+      } else {
+        n1 = magnitude[(y-1)*width+(x-1)];
+        n2 = magnitude[(y+1)*width+(x+1)];
+      }
+      
+      out[idx] = (mag >= n1 && mag >= n2) ? Math.min(255, mag) : 0;
+    }
+  }
+  return out;
+};
+
 /** Generic error-diffusion dithering.
  *  coefficients = array of [dx, dy, weight] */
 const applyErrorDiffusion = (
@@ -153,7 +232,7 @@ const applyErrorDiffusion = (
 };
 
 export const convertToAscii = (srcData: ImageData, options: AsciiOptions): string | ColorAsciiResult => {
-  const { columns, charset, isInverted, brightness, contrast, dither, colorMode, saturation, gamma } = options;
+  const { columns, charset, mode, isInverted, brightness, contrast, dither, colorMode, saturation, gamma } = options;
   
   const srcW = srcData.width;
   const srcH = srcData.height;
@@ -192,6 +271,21 @@ export const convertToAscii = (srcData: ImageData, options: AsciiOptions): strin
   const finalBuffer = new Float32Array(grayBuffer.length);
   for (let i = 0; i < grayBuffer.length; i++) {
     finalBuffer[i] = adjustPixel(grayBuffer[i], brightness, contrast, isInverted, gammaVal);
+  }
+  
+  // 2b. Edge detection (if mode != standard)
+  if (mode && mode !== 'standard') {
+    let edgeBuffer: Float32Array;
+    switch (mode) {
+      case 'sobel': edgeBuffer = sobelEdge(finalBuffer, width, height); break;
+      case 'prewitt': edgeBuffer = prewittEdge(finalBuffer, width, height); break;
+      case 'laplacian': edgeBuffer = laplacianEdge(finalBuffer, width, height); break;
+      case 'canny': edgeBuffer = cannyEdge(finalBuffer, width, height); break;
+      default: edgeBuffer = finalBuffer;
+    }
+    for (let i = 0; i < finalBuffer.length; i++) {
+      finalBuffer[i] = edgeBuffer[i];
+    }
   }
   
   // 3. Dithering

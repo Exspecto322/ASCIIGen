@@ -3,13 +3,14 @@ import { useDropzone } from 'react-dropzone';
 import { useStore } from '../../state/store';
 import { useShallow } from 'zustand/react/shallow';
 import { useAsciiWorker } from '../../features/ascii/useAsciiWorker';
-import { Upload, Play, Pause, ZoomIn, ZoomOut, Maximize2, X } from 'lucide-react';
+import { useWebcam } from '../../features/webcam/useWebcam';
+import { Upload, Play, Pause, ZoomIn, ZoomOut, Maximize2, X, Camera, CameraOff } from 'lucide-react';
 import { convertToAscii } from '../../features/ascii/asciiEngine';
 import type { ColorAsciiResult } from '../../features/ascii/asciiEngine';
 import { getCharset } from '../../features/ascii/charsets';
 
 export const PreviewPanel: React.FC = () => {
-  const { fileUrl, asciiText, colorHtml, isProcessing, mediaType, gifUrl, colorMode, columns, charset, dither, isInverted, brightness, contrast, saturation, gamma, fgColor, bgColor } = useStore(
+  const { fileUrl, asciiText, colorHtml, isProcessing, mediaType, gifUrl, colorMode, columns, charset, mode, dither, isInverted, brightness, contrast, saturation, gamma, fgColor, bgColor } = useStore(
     useShallow(s => ({
       fileUrl: s.fileUrl,
       asciiText: s.asciiText,
@@ -20,6 +21,7 @@ export const PreviewPanel: React.FC = () => {
       colorMode: s.colorMode,
       columns: s.columns,
       charset: s.charset,
+      mode: s.mode,
       dither: s.dither,
       isInverted: s.isInverted,
       brightness: s.brightness,
@@ -34,8 +36,9 @@ export const PreviewPanel: React.FC = () => {
   const setFile = useStore(s => s.setFile);
   const setAscii = useStore(s => s.setAscii);
   const setColorHtml = useStore(s => s.setColorHtml);
+  const pp = useStore(useShallow(s => s.postProcessing));
   
-  useAsciiWorker();
+   useAsciiWorker();
 
   const [zoom, setZoom] = useState(1);
   const [zoomMode, setZoomMode] = useState<'fit' | 'manual'>('fit');
@@ -43,7 +46,11 @@ export const PreviewPanel: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const webcamVideoRef = useRef<HTMLVideoElement>(null);
+  const webcamCanvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(null);
+
+  const { isActive: webcamActive, error: webcamError, startWebcam, stopWebcam } = useWebcam(webcamVideoRef, webcamCanvasRef);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -87,6 +94,7 @@ export const PreviewPanel: React.FC = () => {
           const result = convertToAscii(imageData, {
             columns,
             charset: getCharset(charset),
+            mode,
             dither,
             isInverted,
             brightness,
@@ -114,7 +122,7 @@ export const PreviewPanel: React.FC = () => {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [mediaType, columns, charset, dither, isInverted, brightness, contrast, saturation, gamma, colorMode, setAscii, setColorHtml]);
+  }, [mediaType, columns, charset, mode, dither, isInverted, brightness, contrast, saturation, gamma, colorMode, setAscii, setColorHtml]);
 
   // Paste handler
   useEffect(() => {
@@ -217,7 +225,21 @@ export const PreviewPanel: React.FC = () => {
             <div className="flex items-center gap-3 justify-center">
               <span className="text-[10px] text-neutral-700 bg-neutral-900 px-2 py-0.5 rounded font-mono">Ctrl+V</span>
               <span className="text-[10px] text-neutral-700">to paste</span>
+              <span className="text-neutral-800">|</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); startWebcam(); }}
+                className="flex items-center gap-1.5 text-[10px] text-neutral-500 hover:text-indigo-400 transition-colors bg-neutral-900 px-2.5 py-1 rounded-full border border-neutral-800 hover:border-indigo-500/30"
+              >
+                <Camera className="w-3 h-3" />
+                Webcam
+              </button>
             </div>
+            {webcamError && (
+              <p className="text-[10px] text-red-400 mt-2">{webcamError}</p>
+            )}
+            {/* Hidden webcam elements */}
+            <video ref={webcamVideoRef} className="hidden" muted playsInline />
+            <canvas ref={webcamCanvasRef} className="hidden" />
           </div>
         </div>
       ) : (
@@ -261,6 +283,28 @@ export const PreviewPanel: React.FC = () => {
             </button>
           </div>
 
+          {/* Webcam toggle in toolbar */}
+          {webcamActive && (
+            <button
+              onClick={stopWebcam}
+              className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-red-500/20 text-red-400 px-3 py-1.5 rounded-full text-[10px] font-semibold border border-red-500/30 backdrop-blur-xl hover:bg-red-500/30 transition-colors"
+            >
+              <CameraOff className="w-3 h-3" /> Stop Webcam
+            </button>
+          )}
+          {!webcamActive && fileUrl && (
+            <button
+              onClick={startWebcam}
+              className="absolute top-3 right-14 z-30 p-2 bg-black/70 rounded-full text-neutral-400 hover:text-indigo-400 transition-colors border border-white/10 backdrop-blur-xl"
+              title="Start Webcam"
+            >
+              <Camera className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {/* Hidden webcam elements (when file is loaded) */}
+          <video ref={webcamVideoRef} className="hidden" muted playsInline />
+          <canvas ref={webcamCanvasRef} className="hidden" />
+
           {(mediaType === 'video' || mediaType === 'gif') && (
             <>
               <video 
@@ -290,22 +334,65 @@ export const PreviewPanel: React.FC = () => {
 
           <div ref={containerRef} className="w-full h-full flex items-center justify-center overflow-auto p-4 cursor-grab active:cursor-grabbing custom-scrollbar">
             <div 
-              className="origin-center transition-transform duration-150 ease-out"
-              style={{ transform: `scale(${zoom})`, backgroundColor: colorMode ? '#000000' : bgColor }}
+              className="origin-center transition-transform duration-150 ease-out relative"
+              style={{ 
+                transform: `scale(${zoom})`, 
+                backgroundColor: colorMode ? '#000000' : bgColor,
+                ...(pp.crtCurve ? {
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  perspective: '800px',
+                  transformStyle: 'preserve-3d' as const,
+                } : {}),
+              }}
             >
-              {colorMode && colorHtml ? (
-                <pre 
-                  className="font-mono text-[8px] leading-[8px] whitespace-pre select-text"
-                  style={fontStyle}
-                  dangerouslySetInnerHTML={{ __html: colorHtml }}
+              <div style={{
+                ...(pp.crtCurve ? {
+                  transform: `perspective(${Math.round(600 / pp.crtAmount)}px) rotateX(${pp.crtAmount * 30}deg)`,
+                  transformOrigin: 'center center',
+                } : {}),
+                ...(pp.bloom ? {
+                  filter: `blur(0px)`,
+                  textShadow: `0 0 ${pp.bloomIntensity * 4}px currentColor, 0 0 ${pp.bloomIntensity * 8}px currentColor`,
+                } : {}),
+              }}>
+                {colorMode && colorHtml ? (
+                  <pre 
+                    className="font-mono text-[8px] leading-[8px] whitespace-pre select-text"
+                    style={fontStyle}
+                    dangerouslySetInnerHTML={{ __html: colorHtml }}
+                  />
+                ) : (
+                  <pre 
+                    className="font-mono text-[8px] leading-[8px] whitespace-pre select-text"
+                    style={{ ...fontStyle, color: fgColor }}
+                  >
+                    {asciiText}
+                  </pre>
+                )}
+              </div>
+
+              {/* Post-processing overlays */}
+              {pp.scanlines && (
+                <div 
+                  className="effect-scanlines" 
+                  style={{ 
+                    '--scanline-opacity': pp.scanlinesOpacity,
+                    '--scanline-spacing': `${pp.scanlinesSpacing}px`,
+                  } as React.CSSProperties}
                 />
-              ) : (
-                <pre 
-                  className="font-mono text-[8px] leading-[8px] whitespace-pre select-text"
-                  style={{ ...fontStyle, color: fgColor }}
-                >
-                  {asciiText}
-                </pre>
+              )}
+              {pp.vignette && (
+                <div 
+                  className="effect-vignette" 
+                  style={{ '--vignette-intensity': pp.vignetteIntensity } as React.CSSProperties}
+                />
+              )}
+              {pp.grain && (
+                <div 
+                  className="effect-grain" 
+                  style={{ '--grain-intensity': pp.grainIntensity } as React.CSSProperties}
+                />
               )}
             </div>
           </div>
