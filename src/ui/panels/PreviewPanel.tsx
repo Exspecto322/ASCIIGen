@@ -220,6 +220,9 @@ export const PreviewPanel: React.FC = () => {
 
   return (
     <section className="flex flex-col relative bg-neutral-950 overflow-hidden h-full">
+      {/* Persistent webcam elements — must stay outside conditionals to survive re-renders */}
+      <video ref={webcamVideoRef} className="hidden" muted playsInline />
+      <canvas ref={webcamCanvasRef} className="hidden" />
       {webcamActive ? (
         /* ===== WEBCAM LIVE VIEW ===== */
         <div className="flex-1 overflow-hidden bg-neutral-950 flex flex-col items-center justify-center relative">
@@ -264,9 +267,7 @@ export const PreviewPanel: React.FC = () => {
             LIVE
           </div>
 
-          {/* Hidden webcam elements */}
-          <video ref={webcamVideoRef} className="hidden" muted playsInline />
-          <canvas ref={webcamCanvasRef} className="hidden" />
+
 
           {/* Live ASCII output */}
           <div ref={containerRef} className="w-full h-full flex items-center justify-center overflow-auto p-2 md:p-4 cursor-grab active:cursor-grabbing custom-scrollbar">
@@ -364,9 +365,7 @@ export const PreviewPanel: React.FC = () => {
             {webcamError && (
               <p className="text-[10px] text-red-400 mt-2">{webcamError}</p>
             )}
-            {/* Hidden webcam elements */}
-            <video ref={webcamVideoRef} className="hidden" muted playsInline />
-            <canvas ref={webcamCanvasRef} className="hidden" />
+
           </div>
         </div>
       ) : (
@@ -428,9 +427,7 @@ export const PreviewPanel: React.FC = () => {
               <Camera className="w-3.5 h-3.5" />
             </button>
           )}
-          {/* Hidden webcam elements (when file is loaded) */}
-          <video ref={webcamVideoRef} className="hidden" muted playsInline />
-          <canvas ref={webcamCanvasRef} className="hidden" />
+
 
           {(mediaType === 'video' || mediaType === 'gif') && (
             <>
