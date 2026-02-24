@@ -4,7 +4,7 @@ import { useStore } from '../../state/store';
 import { useShallow } from 'zustand/react/shallow';
 import { useAsciiWorker } from '../../features/ascii/useAsciiWorker';
 import { useWebcam } from '../../features/webcam/useWebcam';
-import { Upload, Play, Pause, ZoomIn, ZoomOut, Maximize2, X, Camera, CameraOff } from 'lucide-react';
+import { Upload, Play, Pause, ZoomIn, ZoomOut, Maximize2, X, Camera, CameraOff, Aperture } from 'lucide-react';
 import { convertToAscii } from '../../features/ascii/asciiEngine';
 import type { ColorAsciiResult } from '../../features/ascii/asciiEngine';
 import { getCharset } from '../../features/ascii/charsets';
@@ -50,7 +50,7 @@ export const PreviewPanel: React.FC = () => {
   const webcamCanvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(null);
 
-  const { isActive: webcamActive, error: webcamError, startWebcam, stopWebcam } = useWebcam(webcamVideoRef, webcamCanvasRef);
+  const { isActive: webcamActive, error: webcamError, startWebcam, stopWebcam, capturePhoto } = useWebcam(webcamVideoRef, webcamCanvasRef, setFile);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -220,7 +220,118 @@ export const PreviewPanel: React.FC = () => {
 
   return (
     <section className="flex flex-col relative bg-neutral-950 overflow-hidden h-full">
-      {!fileUrl ? (
+      {webcamActive ? (
+        /* ===== WEBCAM LIVE VIEW ===== */
+        <div className="flex-1 overflow-hidden bg-neutral-950 flex flex-col items-center justify-center relative">
+          {/* Toolbar */}
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center bg-black/70 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl">
+            <button
+              onClick={capturePhoto}
+              className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/10 rounded-l-full transition-colors"
+              title="Capture Photo"
+            >
+              <Aperture className="w-4 h-4" />
+              Capture
+            </button>
+            <div className="w-px h-5 bg-white/10" />
+            <button onClick={handleZoomOut} className="p-2 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors" title="Zoom Out">
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleFitZoom}
+              className={`px-2.5 py-1.5 text-[11px] font-mono tabular-nums cursor-pointer transition-colors ${zoomMode === 'fit' ? 'text-indigo-300' : 'text-neutral-400 hover:text-white'}`}
+              title="Fit to Screen"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button onClick={handleZoomIn} className="p-2 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors" title="Zoom In">
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            <div className="w-px h-5 bg-white/10" />
+            <button
+              onClick={stopWebcam}
+              className="flex items-center gap-1.5 px-3 py-2 text-[11px] text-red-400 hover:bg-red-500/10 rounded-r-full transition-colors"
+              title="Stop Webcam"
+            >
+              <CameraOff className="w-3.5 h-3.5" />
+              Stop
+            </button>
+          </div>
+
+          {/* Live indicator */}
+          <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-red-500/20 text-red-400 px-3 py-1.5 rounded-full text-[10px] font-semibold border border-red-500/30 backdrop-blur-xl">
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            LIVE
+          </div>
+
+          {/* Hidden webcam elements */}
+          <video ref={webcamVideoRef} className="hidden" muted playsInline />
+          <canvas ref={webcamCanvasRef} className="hidden" />
+
+          {/* Live ASCII output */}
+          <div ref={containerRef} className="w-full h-full flex items-center justify-center overflow-auto p-2 md:p-4 cursor-grab active:cursor-grabbing custom-scrollbar">
+            <div 
+              className="origin-center transition-transform duration-150 ease-out relative overflow-hidden shrink-0"
+              style={{ 
+                transform: `scale(${zoom})`, 
+                backgroundColor: colorMode ? '#000000' : bgColor,
+                ...(pp.crtCurve ? {
+                  borderRadius: '8px',
+                  perspective: '800px',
+                  transformStyle: 'preserve-3d' as const,
+                } : {}),
+              }}
+            >
+              <div style={{
+                ...(pp.crtCurve ? {
+                  transform: `perspective(${Math.round(600 / pp.crtAmount)}px) rotateX(${pp.crtAmount * 30}deg)`,
+                  transformOrigin: 'center center',
+                } : {}),
+                ...(pp.bloom ? {
+                  filter: `blur(0px)`,
+                  textShadow: `0 0 ${pp.bloomIntensity * 4}px currentColor, 0 0 ${pp.bloomIntensity * 8}px currentColor`,
+                } : {}),
+              }}>
+                {colorMode && colorHtml ? (
+                  <pre 
+                    className="font-mono text-[8px] leading-[8px] whitespace-pre select-text"
+                    style={fontStyle}
+                    dangerouslySetInnerHTML={{ __html: colorHtml }}
+                  />
+                ) : (
+                  <pre 
+                    className="font-mono text-[8px] leading-[8px] whitespace-pre select-text"
+                    style={{ ...fontStyle, color: fgColor }}
+                  >
+                    {asciiText || 'Waiting for webcam...'}
+                  </pre>
+                )}
+              </div>
+              {pp.scanlines && (
+                <div 
+                  className="effect-scanlines" 
+                  style={{ 
+                    '--scanline-opacity': pp.scanlinesOpacity,
+                    '--scanline-spacing': `${pp.scanlinesSpacing}px`,
+                  } as React.CSSProperties}
+                />
+              )}
+              {pp.vignette && (
+                <div 
+                  className="effect-vignette" 
+                  style={{ '--vignette-intensity': pp.vignetteIntensity } as React.CSSProperties}
+                />
+              )}
+              {pp.grain && (
+                <div 
+                  className="effect-grain" 
+                  style={{ '--grain-intensity': pp.grainIntensity } as React.CSSProperties}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      ) : !fileUrl ? (
         <div 
           {...getRootProps()} 
           className={`flex-1 flex items-center justify-center p-6 m-4 rounded-2xl transition-all duration-300 cursor-pointer group

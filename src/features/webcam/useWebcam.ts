@@ -12,6 +12,7 @@ import type { ColorAsciiResult } from '../ascii/asciiEngine';
 export const useWebcam = (
   videoRef: React.RefObject<HTMLVideoElement | null>,
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
+  onCapture?: (file: File) => void,
 ) => {
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -114,6 +115,37 @@ export const useWebcam = (
     setIsActive(false);
   }, [videoRef]);
 
+  const capturePhoto = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Freeze the current frame
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `webcam-capture-${Date.now()}.png`, { type: 'image/png' });
+
+      // Stop webcam first, then load the captured file
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = null;
+      }
+      setIsActive(false);
+
+      // Pass the captured file to the caller
+      if (onCapture) {
+        onCapture(file);
+      }
+    }, 'image/png');
+  }, [canvasRef, videoRef, onCapture]);
+
   // Start processing when webcam is active
   useEffect(() => {
     if (!isActive) return;
@@ -143,5 +175,5 @@ export const useWebcam = (
     };
   }, []);
 
-  return { isActive, error, startWebcam, stopWebcam };
+  return { isActive, error, startWebcam, stopWebcam, capturePhoto };
 };
