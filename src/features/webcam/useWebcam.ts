@@ -18,6 +18,8 @@ export const useWebcam = (
   const streamRef = useRef<MediaStream | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
 
   const { columns, charset, mode, dither, isInverted, brightness, contrast, saturation, gamma, colorMode } = useStore(
     useShallow(s => ({
@@ -79,12 +81,26 @@ export const useWebcam = (
     };
   }, [videoRef, canvasRef, columns, charset, mode, dither, isInverted, brightness, contrast, saturation, gamma, colorMode, setAscii, setColorHtml]);
 
-  const startWebcam = useCallback(async () => {
+  const startWebcamWithDevice = useCallback(async (deviceId?: string | null) => {
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-      });
+      // Stop existing stream if any
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+
+      const constraints: MediaStreamConstraints = {
+        video: {
+          ...(deviceId
+            ? { deviceId: { exact: deviceId } }
+            : { facingMode: 'user' }),
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
       const video = videoRef.current;
@@ -93,11 +109,39 @@ export const useWebcam = (
         video.play();
         setIsActive(true);
       }
+
+      // Enumerate cameras after permission is granted (labels are available now)
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter(d => d.kind === 'videoinput');
+        setAvailableCameras(cameras);
+
+        // Track which device is currently active
+        const activeTrack = stream.getVideoTracks()[0];
+        const activeDeviceId = activeTrack?.getSettings()?.deviceId;
+        if (activeDeviceId) {
+          setSelectedDeviceId(activeDeviceId);
+        }
+      } catch {
+        // enumeration failed, not critical
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not access webcam');
       setIsActive(false);
     }
   }, [videoRef]);
+
+  const startWebcam = useCallback(async () => {
+    await startWebcamWithDevice(selectedDeviceId);
+  }, [startWebcamWithDevice, selectedDeviceId]);
+
+  const switchCamera = useCallback(async (deviceId: string) => {
+    setSelectedDeviceId(deviceId);
+    if (isActive) {
+      // Restart with new device while keeping the session alive
+      await startWebcamWithDevice(deviceId);
+    }
+  }, [isActive, startWebcamWithDevice]);
 
   const stopWebcam = useCallback(() => {
     if (rafRef.current) {
@@ -175,5 +219,5 @@ export const useWebcam = (
     };
   }, []);
 
-  return { isActive, error, startWebcam, stopWebcam, capturePhoto };
+  return { isActive, error, startWebcam, stopWebcam, capturePhoto, availableCameras, selectedDeviceId, switchCamera };
 };

@@ -4,7 +4,7 @@ import { useStore } from '../../state/store';
 import { useShallow } from 'zustand/react/shallow';
 import { useAsciiWorker } from '../../features/ascii/useAsciiWorker';
 import { useWebcam } from '../../features/webcam/useWebcam';
-import { Upload, Play, Pause, ZoomIn, ZoomOut, Maximize2, X, Camera, CameraOff, Aperture } from 'lucide-react';
+import { Upload, Play, Pause, ZoomIn, ZoomOut, Maximize2, X, Camera, CameraOff, Aperture, RefreshCw } from 'lucide-react';
 import { convertToAscii } from '../../features/ascii/asciiEngine';
 import type { ColorAsciiResult } from '../../features/ascii/asciiEngine';
 import { getCharset } from '../../features/ascii/charsets';
@@ -50,7 +50,7 @@ export const PreviewPanel: React.FC = () => {
   const webcamCanvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(null);
 
-  const { isActive: webcamActive, error: webcamError, startWebcam, stopWebcam, capturePhoto } = useWebcam(webcamVideoRef, webcamCanvasRef, setFile);
+  const { isActive: webcamActive, error: webcamError, startWebcam, stopWebcam, capturePhoto, availableCameras, selectedDeviceId, switchCamera } = useWebcam(webcamVideoRef, webcamCanvasRef, setFile);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -250,6 +250,34 @@ export const PreviewPanel: React.FC = () => {
             <button onClick={handleZoomIn} className="p-2 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors" title="Zoom In">
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
+            <div className="w-px h-5 bg-white/10" />
+            {/* Camera selector — only visible when multiple cameras */}
+            {availableCameras.length === 2 && (
+              <button
+                onClick={() => {
+                  const other = availableCameras.find(c => c.deviceId !== selectedDeviceId);
+                  if (other) switchCamera(other.deviceId);
+                }}
+                className="p-2 hover:bg-white/10 text-neutral-400 hover:text-indigo-400 transition-colors"
+                title="Flip Camera"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {availableCameras.length > 2 && (
+              <select
+                value={selectedDeviceId || ''}
+                onChange={(e) => switchCamera(e.target.value)}
+                className="bg-transparent text-[10px] text-neutral-400 border-none outline-none cursor-pointer px-2 py-1 max-w-[120px]"
+                title="Select Camera"
+              >
+                {availableCameras.map((cam, i) => (
+                  <option key={cam.deviceId} value={cam.deviceId} className="bg-neutral-900 text-neutral-300">
+                    {cam.label || `Camera ${i + 1}`}
+                  </option>
+                ))}
+              </select>
+            )}
             <div className="w-px h-5 bg-white/10" />
             <button
               onClick={stopWebcam}
